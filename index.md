@@ -1,55 +1,54 @@
 ---
 layout: post
-title: Contents
+title: 目录
 ---
-{% newthought 'These notes'%} form a concise introductory course on probabilistic graphical models{% sidenote 1 'Probabilistic graphical models are a subfield of machine learning that studies how to describe and reason about the world in terms of probabilities.'%}.
-They are based on Stanford [CS228](http://cs.stanford.edu/~ermon/cs228/index.html), taught by [Stefano Ermon](http://cs.stanford.edu/~ermon/), and have been written by [Volodymyr Kuleshov](http://www.stanford.edu/~kuleshov), with the [help](https://github.com/ermongroup/cs228-notes/commits/master) of many students and course staff.
-{% marginnote 'mn-id-whatever' 'The notes are still **under construction**!
-Although we have written up most of the material, you will probably find several typos. If you do, please let us know, or submit a pull request with your fixes to our [Github repository](https://github.com/ermongroup/cs228-notes).'%}
-You too may help make these notes better by submitting your improvements to us via [Github](https://github.com/ermongroup/cs228-notes).
+**这些笔记** 合起来是一个关于概率图模型的简洁的初级课程{% sidenote 1 '概率图模型是机器学习的子领域，研究如何用概率对世界进行描述与推理。'%}.
+他们是基于史丹佛大学[CS228](http://cs.stanford.edu/~ermon/cs228/index.html)课程，由[Stefano Ermon](http://cs.stanford.edu/~ermon/)执教，由[Volodymyr Kuleshov](http://www.stanford.edu/~kuleshov)在许多学生与助教的 [帮助下](https://github.com/ermongroup/cs228-notes/commits/master)完成。
+{% marginnote 'mn-id-whatever' '这些笔记 **还在建设中**！虽然我们已经写好大部分的内容，但其中可能包含错误。如果你发现错误，请告诉我们或是提交pull request到我们的[Github仓库](https://github.com/ermongroup/cs228-notes).'%}
+你也可以把你的改进用[Github](https://github.com/ermongroup/cs228-notes)提交给我们。
 
-This course starts by introducing probabilistic graphical models from the very basics and concludes by explaining from first principles the [variational auto-encoder](), an important probabilistic model that is also one of the most influential recent results in deep learning.
+这个课程首先介绍概率图模型的基础，最后会从头讲解[变自编码器]()，这是一个很重要的概率模型，同时也是近期深度学习中最重要的成果之一。
 
-## Preliminaries
+## 前置
 
-1. [Introduction](preliminaries/introduction/) What is probabilistic graphical modeling? Overview of the course.
+1. [导论](preliminaries/introduction/)：概率图模型是什么？综览本课程。
 
-2. [Review of probability theory](preliminaries/probabilityreview): Probability distributions. Conditional probability. Random variables.
+2. [复习概率论](preliminaries/probabilityreview)：概率分布、条件概率、随机变量。
 
-3. [Examples of real-world applications](preliminaries/applications): Image denoising. RNA structure prediction. Syntactic analysis of sentences. Optical character recognition.
+3. [实际应用范例](preliminaries/applications)：图形降燥、预测RNA构造、句法分析、光学字体辨识(OCR)。
 
-## Representation
+## 表示
 
-1. [Bayesian networks](representation/directed/): Definitions. Representations via directed graphs. Independencies in directed models.
+1. [贝叶斯网络](representation/directed/)：定义、有向图表示。有向模型中的独立性。
 
-2. [Markov random fields](representation/undirected/): Undirected vs directed models. Independencies in undirected models. Conditional random fields.
+2. [马可夫网络](representation/undirected/)：无向模型与有向模型比较。无向模型中的独立性。条件随机场(CRF)。
 
-## Inference
+## 推理
 
-1. [Variable elimination](inference/ve/) The inference problem. Variable elimination. Complexity of inference.
+1. [消除变量法](inference/ve/) 推理问题。消除变量法。推理过程的复杂度。
 
-2. [Belief propagation](inference/jt/): The junction tree algorithm. Exact inference in arbitrary graphs. Loopy Belief Propagation.
+2. [信念传播方程](inference/jt/)：联合树算法。任意图模型中进行精确推理。带循环的信念传播过程。
 
-3. [MAP inference](inference/map/): Max-sum message passing. Graphcuts. Linear programming relaxations. Dual decomposition.
+3. [最大后验概率推理](inference/map/)：Max-sum信息传播。Graphcuts。线性规划条件松弛。偶分解方法。
 
-4. [Sampling-based inference](inference/sampling/): Monte-Carlo sampling. Importance sampling. Markov Chain Monte-Carlo. Applications in inference.
+4. [抽样推理](inference/sampling/)：蒙地卡罗抽样法。重要性抽样。马可夫链蒙地卡罗法。推理中的应用。
 
-5. [Variational inference](inference/variational/): Variational lower bounds. Mean Field. Marginal polytope and its relaxations.
+5. [Variational inference](inference/variational/)：Variational lower bounds、Mean Field、Marginal polytope与其条件松弛。
 
-## Learning
+## 学习
 
-1. [Learning in directed models](learning/directed/): Maximum likelihood estimation. Learning theory basics. Maximum likelihood estimators for Bayesian networks.
+1. [有向模型中的学习](learning/directed/)：最大似然估计。学习理论基础。贝叶斯网络中的最大似然估计。
 
-2. [Learning in undirected models](learning/undirected/): Exponential families. Maximum likelihood estimation with gradient descent. Learning in CRFs
+2. [无向模型中的学习](learning/undirected/)：Exponential families、用梯度降下法进行最大似然估计。CRF中的学习。
 
-3. [Learning in latent variable models](learning/latent/): Latent variable models. Gaussian mixture models. Expectation maximization.
+3. [隐函数模型中的学习](learning/latent/)：隐函数模型。混和高斯模型。预期最大化。
 
-4. [Bayesian learning](learning/bayesianlearning/): Bayesian paradigm. Conjugate priors. Examples.
+4. [贝叶斯学习](learning/bayesianlearning/)：贝叶斯典范。共轭先验分配。例子。
 
-5. [Structure learning](learning/structLearn/): Chow-Liu algorithm. Akaike information criterion. Bayesian information criterion. Bayesian structure learning.
+5. [结构学习](learning/structLearn/)：周刘算法、赤池信息量准则、贝叶斯信型量准则、贝叶斯结构学习。
 
-## Bringing it all together
+## 融会贯通
 
-1. [The variational autoencoder](extras/vae): Deep generative models. The reparametrization trick. Learning latent visual representations.
+1. [变自编码器](extras/vae)：一种深度生成模型、重新赋予参数的技巧。学习隐含的视觉表现。
 
-2. List of further readings: Structured support vector machines. Bayesian non-parametrics.
+2. 延伸阅读列表：结构性支持向量机。贝叶斯的非参数性模型。
