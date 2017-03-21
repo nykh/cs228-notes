@@ -1,80 +1,87 @@
 ---
 layout: post
-title: Sampling methods
+title: 使用采样方法
 ---
-In practice, the probabilistic models that we use are often quite complex, and simple algorithms like variable elimination may be too slow for them. In fact, many interesting classes of models may not admit exact polynomial-time solutions at all, and for this reason, much research effort in machine learning is spent on developing algorithms that yield *approximate* solutions to the inference problem. This section begins our study of such algorithms.
+实际上，我们常常使用很复杂的概率模型，消除变数法一类简单算法通常太慢。
+事实上，很多类有趣的模型都不允许多项式时间的精确解。因此许多研究试图发明算法
+来求推断问题的近似解。这个笔记开始讨论这些算法。
 
-There exist two main families of approximate algorithms: *variational* methods{% sidenote 1 'Variational inference methods take their name from the *calculus of variations*, which deals with optimizing functions that take other functions as arguments.'%}, which formulate inference as an optimization problem, as well as *sampling* methods, which produce answers by repeatedly generating random numbers from a distribution of interest.
+有两大类近似算法：「变分方法」{% sidenote 1 '变分方法得名自 *变分法*，研究如何优化其他以函数為定义域的函数。'%}把推断看作一个优化问题。而「采样发法」则通过从一个分布不断产生随机数来近似解。
 
-Sampling methods can be used to perform both marginal and MAP inference queries; in addition, they can compute various interesting quantities, such as expectations $$\Exp[f(X)]$$ of random variables distributed according to a given probabilistic model. Sampling methods have historically been the main way of performing approximate inference, although over the past 15 years variational methods have emerged as viable (and often superior) alternatives.
+采样方法可以用来求边缘跟MAP推断，另外还能用来计算许多有趣的量，
+例如概率模型中变数的期望值 $$\Exp[f(X)]$$。
+传统上采样方法是近似推断的主要方法，然而最近15年间变分方法开始斩露头角，常常还超过采样方法。
 
-## Sampling from a probability distribution
+## 从概率分布中采样
 
-As a warm-up, let's think for a minute how we might sample from a multinomial distribution with $$k$$ possible outcomes and associated probabilities $$\theta_1,...,\theta_k$$.
+首先作為暖身，先想想怎么从一个有 $$k$$ 种结果的多项分布中采样，对应的概率是 $$\theta_1,...,\theta_k$$。
 
-Sampling, in general, is not an easy problem. Our computers can only generate samples from very simple distributions{% sidenote 1 'Even those samples are not truly random. They are actually taken from a deterministic sequence whose statistical properties (e.g. running averages) are indistinguishable form a truly random one. We call such sequences *pseudorandom*.'%}, such as the uniform distribution over $$[0,1]$$.
-All sampling techniques involve calling some kind of simple subroutine multiple times in a clever way.
+一般意义上的采样不是简单的问题。我们的电脑只能从很简单的分布中产生随机数{% sidenote 1 '甚至这些数也不是真正的随机数。通常是自一个确定的数列中产生，只是这个数列某些性质（例如其累计期望值）与真正的随机分布一样。我们把这样的随机数称作偽随机数。'%}，例如实数区间 $$[0,1]$$ 上的均匀分布。
+所有的采样技术都利用某些技巧重复调用某些简单的子函数。
 
 In our case, we may reduce sampling from a multinomial variable to sampling a single uniform variable by subdividing a unit interval into $$d$$ regions with region $$i$$ having size $$\theta_i$$. We then sample uniformly from $$[0,1]$$ and return the value of the region in which our sample falls.
-{% maincolumn 'assets/img/multinomial-sampling.png' 'Reducing sampling from a multinomial distribution to sampling a uniform distribution in [0,1].'%}
+{% maincolumn 'assets/img/multinomial-sampling.png' '把采样多项分布简化為采样一个 [0,1] 上的均匀分布'%}
 
-### Sampling from directed graphical models
+### 从有向概率模型中采样
 
-{% marginfigure 'nb1' 'assets/img/grade-model.png' 'Bayes net model describing the performance of a student on an exam. The distribution can be represented a product of conditional probability distributions specified by tables.'%}
+{% marginfigure 'nb1' 'assets/img/grade-model.png' '描述一个学生在考试中表现的贝叶斯模型。其分布可以表示為各个表格表示的条件概率分布的积。'%}
 
-Our technique for sampling from multinomials naturally extends to Bayesian networks with multinomial variables, via a method called *ancestral* (or *forward*) sampling. Given a probability $$p(x_1,...,x_n)$$ specified by a Bayes net, we sample variables in topological order. In other words, we start by sampling the variables with no parents; then we sample from the next generation by conditioning these variables' CPDs to values sampled at the first step. We proceed like this until the $$n$$ variables have been sampled.
+上述技巧自然适用于有多项分布的贝叶斯网路。我们利用的方法叫做祖先采样或前采样。
+对于贝叶斯网络的概率分布 $$p(x_1,...,x_n)$$，我们以拓朴顺序采样各变数。
+也就是说我们先对根节点采样，然后在向下一层的条件概率进行采样，并把上一层采样出的值视為已知。以此类推直到所有节点都完成采样。
 
 In our earlier model of a student's grade, we would first sample an exam difficulty $$d'$$ and an intelligence level $$i'$$. Then, once we have samples, $$d', i'$$ we generate a student grade $$g'$$ from $$p(g \mid d', i')$$. At each step, we simply perform standard multinomial sampling.
 
-## Monte Carlo estimation
+## 蒙地卡罗估计
 
 Sampling from a distribution lets us perform many useful tasks, including marginal and MAP inference, as well as computing integrals of the form
 {% math %}
 \Exp_{x \sim p}[f(x)] = \sum_{x} f(x) p(x).
 {% endmath %}
-If $$g$$ does not have a special structure that matches the Bayes net structure of $$p$$, this integral will be impossible to perform analytically; instead, we will approximate it using a large number of samples from $$p$$. Algorithms that construct solutions based on a large number of samples from a given distribution are referred to as Monte Carlo (MC) methods{% sidenote 1 'The name Monte Carlo refers to a famous casino in the city of Monaco. The term was originally coined as a codeword by physicists working the atomic bomb as part of the secret Manhattan project.'%}.
+If $$g$$ does not have a special structure that matches the Bayes net structure of $$p$$, this integral will be impossible to perform analytically; instead, we will approximate it using a large number of samples from $$p$$. 使用大量取样来求解的算法思想称作「蒙地卡罗」方法{% sidenote 1 'The name Monte Carlo refers to a famous casino in the city of Monaco. The term was originally coined as a codeword by physicists working the atomic bomb as part of the secret Manhattan project.'%}.
 
-Monte Carlo integration is an important instantiation of the general Monte Carlo principle.
-This technique approximates a target expectation with
+蒙地卡罗积分是一般蒙地卡罗方法的一个实例。
+这个方法近似一个期望值如下
 {% math %}
 \Exp_{x \sim p}[f(x)] \approx \frac{1}{T} \sum_{t=1}^T f(x^t),
 {% endmath %}
-where $$x^1,...,x^T$$ are samples drawn according to $$p$$.
+其中 $$x^1,...,x^T$$ 从 $$p$$ 分布中取样。
 
-It easy to show that the expected value of $$I_T$$, the MC estimate, equals the true integral. We say that $$I_T$$ is an unbiased estimator for $$\Exp_{x \sim p}[f(x)]$$. Moreover as $$I_T \to \Exp_{x \sim p}[f(x)]$$ as $$T \to \infty$$. Finally, we can show that the variance of $$I_T$$ equals $$\text{var}_P(f(x))/T$$, which can be made arbitrarily small with $$T$$. 
+很容易证明 $$I_T$$ 的期望，即蒙地卡罗期望，与真正的积分相等。我们说 $$I_T$$ 是 $$\Exp_{x \sim p}[f(x)]$$ 的无偏估计。
+另外，由于当 $$T \to \infty$$，$$I_T \to \Exp_{x \sim p}[f(x)]$$，我们可以证明 $$I_T$$ 的方差等于 $$\text{var}_P(f(x))/T$$。我们可以通过增加 $$T$$ 使得方差任意小。
 
-### Rejection sampling
+### 拒绝采样
 
 {% marginfigure 'nb1' 'assets/img/rejection-sampling.png' 'Graphical illustration of rejection sampling. We may compute the area of circle by drawing uniform samples from the square; the fraction of points that fall in the circle represents its area. This method breaks down if the size of the circle is small relative to the size of the square.'%}
-A special case of Monte Carlo integration is rejection sampling. We may use it to compute the area of a region $$R$$ by sampling in a larger region with a known area and recording the fraction of samples that falls within $$R$$.
+蒙地卡罗积分的特例是拒绝采样。我们可以用它估计区域 $$R$$ 的面积，只要在一个更大已知区域内进行采样然后算有多少样本落入 $$R$$ 当中。
 
-For example, we may use rejection sampling to compute marginal probabilities of the form $$p(x=x')$$: we may write this probability as $$\Exp_{x\sim p}[\Ind(x=x')]$$ and then take the Monte Carlo approximation. This will amount to sampling many samples from $$p$$ and keeping ones that are consistent with the value of the marginal.
+例如我们可以用拒绝采样来计算 $$p(x=x')$$ 形式的边缘概率：我们可以把概率写成 $$\Exp_{x\sim p}[\Ind(x=x')]$$ 然后用蒙地卡罗方法近似。这相当于从 $$p$$ 采样然后只保留那些 $$x$$ 相当于边缘条件的样本。
 
-### Importance sampling
+### 重要性采样
 
-Unfortunately, this procedure is very wasteful. If $$p(x=x')$$ equals, say, 1%, then we will discard 99% of all samples.
+不过这个方法很浪费。例如如果 $$p(x=x')$$ 等于 1%，那么我们就得舍弃掉 99% 的样本。
 
-A better way of computing such integrals is via an approach called *importance sampling*. The main idea is to sample from a distribution $$q$$ (hopefully roughly proportional to $$f \cdot p$$), and then *reweigh* the samples in a principled way, so that their sum still approximates the desired integral.
+一个更好的方法是「重要性采样」。主要思想是从分布 $$q$$（大约与 $$f \cdot p$$ 成正比）中采样，然后系统地对样本重新加权，使其总和相当于想要计算的积分。
 
-More formally, suppose we are interested in computing $$\Exp_{x \sim p}[f(x)]$$. We may rewrite this integral as
+假设我们想计算 $$\Exp_{x \sim p}[f(x)]$$，我们可以改写积分成
 {% math %}
 \begin{align*}
-\Exp_{x \sim p}[f(x)] 
+\Exp_{x \sim p}[f(x)]
 & = \sum_{x} f(x) p(x) \\
 & = \sum_{x} f(x) \frac{p(x)}{q(x)} q(x) \\
 & = \Exp_{x \sim q}[f(x)w(x)] \\
 & \approx \frac{1}{T} \sum_{t=1}^T f(x^t) w(x^t) \\
 \end{align*}
 {% endmath %}
-where $$w(x) = \frac{p(x)}{q(x)}$$. In other words, we may instead take samples from $$q$$ and reweigh them with $$w(x)$$; the expected value of this Monte Carlo approximation will be the original integral.
+$$w(x) = \frac{p(x)}{q(x)}$$。换句话说，我们改為从 $$q$$ 取样并以 $$w(t)$$ 重新加权结果，这个蒙地卡罗近似值的期望相等于原本积分的期望。
 
-Now the variance of this new estimator equals 
+这一新估计值的方差等于
 {% math %}
 \text{var}_{x \sim q}(f(x)w(x)) = \Exp_{x \sim q} [f^2(x) w^2(x)] - \Exp_{x \sim q} [f(x) w(x)]^2 \geq 0
 {% endmath %}
-Note that we can set the variance to zero by choosing {%m%}q(x) = \frac{|f(x)|p(x)}{\int |f(x)|p(x) dx}{%em%}; this means that if we can sample from this $$q$$ (and evaluate the corresponding weight), all the Monte Carlo samples will be equal and correspond to the true value of our integral. Of course, sampling from such a $$q$$ would be NP-hard in general, but this at least gives us an indication for what to strive for.
+我们可以把方差归零，只要取 {%m%}q(x) = \frac{|f(x)|p(x)}{\int |f(x)|p(x) dx}{%em%}；这代表只要我们能从 $$q$$ 中采样并计算对应的权重，所有的蒙地卡罗样本都会相等并等于真正积分。当然，从这样的 $$q$$ 采样会是NP困难，但至少给了我们一个方向。
 
-In the context of our previous example for computing $$p(x=x') = \Exp_{z\sim p}[p(x'|z)]$$, we may take $$q$$ to be the uniform distribution and apply importance sampling as follows:
+在先前例子中我们要计算 $$p(x=x') = \Exp_{z\sim p}[p(x'|z)]$$，我们可以取 $$q$$ 等于一个均匀分布并使用重要性采样
 {% math %}
 \begin{align*}
 p(x=x')
@@ -84,38 +91,37 @@ p(x=x')
 & \approx \frac{1}{T} \sum_{t=1}^T \frac{p(z^t, x')}{q(z^t)} \\
 \end{align*}
 {% endmath %}
-Unlike rejection sampling, this will use all the examples; if $$p(z|x')$$ is not too far from uniform, this will converge to the true probability after only a very small number of samples.
+不同于拒绝采样，这会使用所有的样本。当 $$p(z|x')$$ 跟均匀分布差不多时，只要几个样本就足够收敛到真正的概率值
 
-## Markov chain Monte Carlo
+## 马可夫链蒙地卡罗法
 
-Let us now turn our attention from computing expectations to performing marginal and MAP inference using sampling.
-We will solve these problems using a very powerful technique called Markov chain Monte Carlo{% sidenote 1 'Markov chain Monte Carlo is another algorithm that was developed during the Manhattan project and eventually republished in the scientific literature some decades later. It is so important, that is was recently named as one of the [10 most important algorithms](https://www.siam.org/pdf/news/637.pdf) of the XXth century.'%} (MCMC).
+我们现在把注意力转回如何用采样法进行边缘与MAP推断。我们可以使用一个很强大的技巧，叫做马可夫链蒙地卡罗法o{% sidenote 1 '马可夫链蒙地卡罗法是另一个曼哈顿计画期间发明的算法，几十年后才重新发表。其重要性最近被认為是20世纪[十个最重要算法](https://www.siam.org/pdf/news/637.pdf)之一。'%} (MCMC).
 
-### Markov Chain
+### 马可夫链
 
-A key concept in MCMC is that of a *Markov chain*. A (discrete-time) Markov chain is a sequence of random variables $$S_0, S_1, S_2, ...$$ with each random variable $$S_i \in \{1,2,...,d\}$$ taking one of $$d$$ possible values, intuitively representing the state of a system. The initial state is distributed according to a probability $$P(S_0)$$; all subsequent states are generated from a conditional probability distribution that depends only on the previous random state, i.e. $$S_i$$ is distributed according to $$P(S_i \mid S_{i-1})$$.
+马可夫链蒙地卡罗法的关键概念是「马可夫链」。（离散时间）马可夫链是一个随机变量的序列 $$S_0, S_1, S_2, ...$$，其中每个随机变量 $$S_i \in \{1,2,...,d\}$$ 都可以取 $$d$$ 个可能的值。这很直觉的表示了一个系统的状态。初始状态按照 $$P(S_0)$$ 分布。之后每个状态则从前一个状态按照出发按条件概率分布，即 $$S_i$$ 按 $$P(S_i \mid S_{i-1})$$ 分布。
 
-The probability $$P(S_i \mid S_{i-1})$$ is the same at every step $$i$$; this means that the transition probabilities at any time in the entire process depend only on the given state and not on the history of how we got there. This is called the *Markov* assumption.
+$$P(S_i \mid S_{i-1})$$ 在每一步 $$i$$ 都一样。这表示整个时间过程中转移概率只由现在的状态决定，无关从前的历史。这称作 **马可夫假设**。
 
-{% marginfigure 'mc' 'assets/img/markovchain.png' 'A Markov chain over three states. The weighted directed edges indicate probabilities of transitioning to a different state.'%}
-It is very convenient to represent the transition probability as a $$d \times d$$ matrix
+{% marginfigure 'mc' 'assets/img/markovchain.png' '三个状态的马可夫链。每条边上的权重表示转移概率。'%}
+很容易把转移概率分布表达為一个 $$d \times d$$ 矩阵。
 {% math %}
 T_{ij} = P(S_\text{new} = i \mid S_\text{prev} = j),
 {% endmath %}
-where $$T^t$$ denotes matrix exponentiation (we apply the matrix operator $$t$$ times).
+其中 $$T^t$$ 表示矩阵幂（多次应用该矩阵运算子 $$t$$）。
 
-If the initial state $$S_0$$ is drawn from a vector probabilities $$p_0$$, we may represent the probability $$p_t$$ of ending up in each state after $$t$$ steps as
+如果初始状态 $$S_0$$ 来自矢量概率分布 $$p_0$$，我们可以把 $$t$$ 步后进入每个状态的概率分布 $$p_t$$ 表示為
 {% math %}
 p_t = T^t p_0.
 {% endmath %}
 
-The limit $$\pi = \lim_{t \to \infty} p_t$$ (when it exists) is called a *stationary distribution* of the Markov chain. We will construct below Markov chain with a stationary distribution $$\pi$$ that exists and is the same for all $$p_0$$; we will refer to such $$\pi$$ as *the* stationary distribution* of the chain.
+极限 $$\pi = \lim_{t \to \infty} p_t$$ （如果存在）称作马可夫链的「一个」稳定分布。当马可夫链存在稳定分布 $$\pi$$ 并对所有初始状态 $$p_0$$ 都一样我们把这称之為「马可夫链的稳定分布」。
 
-A sufficent condition for a stationary distribution is called *detailed balance*:
+稳定分布存在的一个充分条件是「detailed balance」：
 {% math %}
 \pi(x') T(x \mid x') = \pi(x) T(x' \mid x) \;\text{for all $x$}
 {% endmath %}
-It is easy to show that such a $$\pi$$ must form a stationary distribution (just sum both sides of the equation over $$x$$ and simplify). However, the reverse may not hold and indeed it is possible to have [MCMC without satisfying detailed balance](https://arxiv.org/pdf/1007.2262.pdf).
+容易证明这样的分布 $$\pi$$ 会有均匀分布（只须把等式两边 $$x$$ 边缘化）。然而反过来不成立，因為存在[不满足细致平衡的马可夫链蒙地卡罗法](https://arxiv.org/pdf/1007.2262.pdf).
 
 ### Existence of a stationary distribution
 
@@ -156,25 +162,27 @@ At a high level, MCMC algorithms will have the following structure. They take as
 Assuming $$B$$ is sufficiently large, the latter collection of states will form samples from $$p$$. We may then use these samples for Monte Carlo integration (or in importance sampling). We may also use them to produce Monte Carlo estimates of marginal probabilities. Finally, we may take the sample with the highest probability and use it as an estimate of the mode (i.e. perform MAP inference).
 
 
-### Metropolis-Hastings algorithm
+### Metropolis-Hastings 算法
 
-The Metropolis-Hastings (MH) algorithm is our first way to construct Markov chains within MCMC. The MH method constructs a transition operator $$T(x' \mid x)$$ from two components:
+Metropolis-Hastings (MH) 算法是在马可夫链蒙地卡罗当中取样的方法。MH 法的转移操作 $$T(x')$$ 包含两个部份：
 
-- A transition kernel $$Q(x'\mid x)$$, specified by the user
-- An acceptance probability for moves proposed by $$Q$$, specified by the algorithm as
+- 转移核 $$Q(x'\mid x)$$ 由使用者指定
+- 一个接受概率，决定是否接受 $$Q$$ 提案的值，按如下计算
 {% math %}
 A(x' \mid x) = \min \left(1, \frac{P(x')Q(x \mid x')}{P(x)Q(x' \mid x)} \right).
 {% endmath %}
 
-At each step of the Markov chain, we choose a new point $$x'$$ according to $$Q$$. Then, we either accept this proposed change (with probability $$\alpha$$), or with probability $$1-\alpha$$ we remain at our current state.
+每一步，我们根据 $$Q$$ 选择一个新位置 $$x'$$。然后根据 $$\alpha$$ 决定是否移动到这个新位置或是留在现在位置。
 
-Notice that the acceptance probability encourages us to move towards more likely points in the distribution (imagine for example that $$Q$$ is uniform); when $$Q$$ suggests that we move is a low-probability region, we follow that move only a certain fraction of the time.
+注意接受概率倾向于移动到分布中更加可能的位置（例如想像 $$Q$$ 是均匀分布）。
+当 $$Q$$ 提议一个低概率位置的时候，我们就比较不太会移动过去。
 
-In practice, the distribution $$Q$$ is taken to be something simple, like a Gaussian centered at $$x$$ if we are dealing with continuous variables. 
+实践中，$$Q$$ 通常比较简单，例如集中于当前位置 $$x$$ 的高斯分布。这对连续变量有用。
 
-Given any $$Q$$ the MH algorithm will ensure that $$P$$ will be a stationary distribution of the resulting Markov Chain. More precisely, $$P$$ will satisfy the detailed balance condition with respect to the MH Markov chain.
+MH 算法保证对任意 $$Q$$，（目标分布）$$P$$ 会是这个马可夫链的稳定分布。更精确的说，
+$$P$$ 对 MH 马可夫链满足细致平衡条件。
 
-To see that, first observe that if $$A(x' \mid x) < 1$$, then $$\frac{P(x)Q(x' \mid x)}{P(x')Q(x \mid x')} > 1$$ and thus $$A(x \mid x') = 1$$. When $$A(x' \mid x) < 1$$, this lets us write:
+要证明，注意当 $$A(x' \mid x) < 1$$，则 $$\frac{P(x)Q(x' \mid x)}{P(x')Q(x \mid x')} > 1$$，于是 $$A(x \mid x') = 1$$。当 $$A(x' \mid x) < 1$$ 有：
 {% math %}
 \begin{align*}
 A(x' \mid x) & =  \frac{P(x')Q(x \mid x')}{P(x)Q(x' \mid x)} \\
@@ -182,33 +190,33 @@ P(x')Q(x \mid x') A(x \mid x') & =  P(x)Q(x' \mid x) A(x' \mid x) \\
 P(x')T(x \mid x') & =  P(x)T(x' \mid x),
 \end{align*}
 {% endmath %}
-which is simply the detailed balance condition. We used $$T(x \mid x')$$ to denote the full transition operator of MH (obtained by applying both $$Q$$ and $$A$$). Thus, if the MH Markov chain is ergodic, its stationary distribution will be $$P$$.
+也就是细致平衡方程。我们用 $$T(x \mid x')$$ 表示 MH 的整个转移运算（包含 $$Q$$ 跟 $$A$$）。所以如果 MH 的马可夫链满足遍历性，其稳定分布会成為 $$P$$。
 
-### Gibbs sampling
+### 吉布斯采样
 
-A widely-used special case of the Metropolis-Hastings methods is Gibbs sampling. Given an ordered set of variables $$x_1,...,x_n$$ and a starting configuration $$x^0 = (x_1^0,...,x_n^0)$$, we iterate through the variables one at a time; at each time step $$t$$, we:
+Metropolis-Hastings 法的一个常见特例是吉布斯采样。对一个变数序列 $$x_1,...,x_n$$ 及初始状态 $$x^0 = (x_1^0,...,x_n^0)$$，我们对变数逐个进行迭代。在每个时间点 $$t$$：
 
-1. Sample $$x_i' \sim p(x_i \mid x_{-i}^t)$$
-2. Set $$x^{t+1} = (x_1^t, ..., x_i', ..., x_n^t).$$
+1. 采样 $$x_i' \sim p(x_i \mid x_{-i}^t)$$
+2. 设 $$x^{t+1} = (x_1^t, ..., x_i', ..., x_n^t).$$
 
-We use $$x_{-i}^t$$ to denote all variables in $$x^t$$ except $$x_i$$. It is often very easy to performing this sampling step, since we only need to condition $$x_i$$ on its Markov blanket, which is typically small.
+其中 $$x_{-i}^t$$ 表示 $$x^t$$ 中 $$x_i$$ 以外的所有变数。这步采样通常很容易，因為 $$x_i$$ 只依赖于其马可夫毯，数量通常很小。
 
-Gibbs sampling can be seen as a special case of MH with proposal
-$$ Q(x_i', x_{-i} \mid x_i, x_{-i}) = P(x_i' \mid x_{-i}). $$
-It is easy check that the acceptance probability simplifies to one.
+吉布斯采样可视為 MH 特例，即使用提议
+$$ Q(x_i', x_{-i} \mid x_i, x_{-i}) = P(x_i' \mid x_{-i}). $$。
+容易确认在这种情况下接受概率简化至 1（总是接受）。
 
-Assuming the right transition operator, both Gibbs sampling and MH will eventually produce samples from their stationary distribution, which by construction is $$P$$. 
+假设有正确的转移操作，吉布斯采样与MH都会最终得到稳定分布的采样，即 $$P$$。
 
-There exist simple ways of ensuring that this will be the case
+有些简单的方法保证这点
 
-- To ensure irreducibility, the transition operator $$Q$$ with MH should be able to potentially move to every state. In the case of Gibbs sampling, we would like to make sure that every $$x_i'$$ can get sampled from $$p(x_i \mid x_{-i}^t)$$.
-- To ensure aperiodicity, it is enough to let the chain transition stay in its state with some probability.
+- 要保证 irreducibility，MH 转移操作 $$Q$$ 应该要能到达每个状态。对吉布斯采样，我们要保证每个 $$x_i'$$ 都能从 $$p(x_i \mid x_{-i}^t)$$ 中采样。
+- 保证非周期性，只需要让每个转移有机会待在同样的状态。
 
-In practice, it is not difficult to ensure these requirements are met.
+实践中不难保证这些条件。
 
 ### Running time of MCMC
 
-A key parameter to this algorithm in the number of burn-in steps $$B$$. Intuitively, this corresponds to the number of steps needed to converge to our limit (stationary) distribution. This is called the *mixing time* of the Markov chain{% sidenote 1 'There is a technical definition of this quantity, which we will not cover here.'%}. Unfortunately, this time may vary dramatically, and may sometimes take essentially forever. For example, if the transition matrix is
+这个算法中的重要参数是暖身步数 $$B$$。直觉来说，这是系统收敛到极限（稳定）分布所需的步数。这也被称作马可夫链的「混合时间」{% sidenote 1 '这个量有一个详细定义，这裡省略'%}。不巧的是这个时间可以差很多，有时甚至几乎没尽头。例如如果转移矩阵是
 {% math %}
 T = \left[
 \begin{matrix}
@@ -217,10 +225,11 @@ T = \left[
 \end{matrix}
 \right],
 {% endmath %}
-then for small $$\e$$ it will take a very long time to reach the stationary distribution, which is close to $$(0.5, 0.5)$$. At each step, we will stay in the same state with overwhelming probability; very rarely, we will transition to another state, and then stay there for a very long time. The average of these states will converge to $$(0.5, 0.5)$$, but the convergence will be very slow.
+那么当 $$\e$$ 很小时系统会花很久才能达到稳定分布 $$(0.5, 0.5)$$。每一步上系统都有巨大的可能性待在同样的状态，所以每一个状态都会花很多时间。虽然最终这些状态会收敛到 $$(0.5, 0.5)$$，但这会花很长时间。
 
 This problem will also occur with complicated distributions that have two distinct and narrow modes; with high probability, the algorithm will sample from a given mode for a very long time. These examples are indications that sampling is a hard problem in general, and MCMC does not give us a free lunch. Nonetheless, for many real-world distributions, sampling will produce very useful solutions.
 
-Another, perhaps more important problem, is that we may not know when to end the burn-in period, even if it is theoretically not too long. There exist many heuristics to determine whether a Markov chain has *mixed*; however, typically these heuristics involve plotting certain quantities and estimating them by eye; even the quantitative measures are not significantly more reliable than this approach. 
+一个可能更重要的问题时我们不知道暖身应该花多少时间，即便理论告诉我们这不用很长。
+有很多啟发性的方法估计一个马可夫链是否已经充分混合了。然而，这些啟发性的方法通常需要印出来然后让人来决定，量化测量法都不见得比这个方法可靠。
 
-In summary, even though MCMC is able to sample from the right distribution (which in turn can be used to solve any inference problem), doing so may sometimes require a very long time, and there is no easy way to judge the amount of computation that we need to spend to find a good solution.
+总之，虽然马可夫链蒙地卡罗法可以让我们从各种分布中采样（从而解决推断问题），有时候运行时间很长，而且没有明确的方法估计要多少步计算才能得到好的结果。

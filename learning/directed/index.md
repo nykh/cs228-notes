@@ -1,61 +1,74 @@
 ---
 layout: post
-title: Learning in directed models
+title: 有向模型中的學習
 ---
-We now turn our attention to the third and last part of the course: *learning*. Given a dataset, we would like to fit a model that will make useful predictions on various tasks that we care about.
+现在我们把注意力转到本课程的第三部份也是最后一部分：「学习」。
+已知一数据集，调适一个模型使其可以做出我们需要的预测。
 
-A graphical model has two components: the graph structure, and the parameters of the factors induced by this graph. These components lead to two different learning tasks:
+图模型有两个部份：图结构、该图导出的因子的参数。这两部份对应两种不同的学习任务：
 
-- *Parameter learning*, where the graph structure is known and we want to estimate the factors.
-- *Structure learning*, where we want to estimate the graph, i.e. determine from data how the variables depend on each other.
+- **参数学习**，对已知的图结构估计参数
+- **结构学习**，估计图结构，即从数据中确定变量彼此之间的关系
 
-We are going to first focus on parameter learning, and come back to structure learning in a later chapter.
+我们首先专注于参数学习，然后在后面的章节讲结构学习。
 
-We will consider parameter learning in both directed and undirected models. It turns out that the former will admit easy, closed form solutions, while the latter will involve potentially intractable numerical optimization techniques. In later sections, we will look at latent variable models (which contain unobserved hidden variables that succinctly model the event of interest) as well as Bayesian learning, a general approach to statistics that offers certain advantages to more standard approaches.
+我们考虑有向与无向图中的参数学习。前者允许简单的闭形式解，而后者则可能需要难解的
+数字优化技巧。
+后面的章节裡我们会讲隐变量模型（包含未观测的变量的模型）以及
+贝叶斯学习，一个统计的一般性方法，有时比标准作法更有效。
 
-## The learning task
+## 学习任务
 
 Before, we start our discussion of learning, let's first reflect on what it means to fit a model, and what is a desirable objective for this task.
 
-Let's assume that the domain is governed by some underlying distribution $$p^*$$. We are given a dataset $$D$$ of $$m$$ samples from $$p^*$$; The standard assumption is that the data instances are independent and identically distributed (iid). We are also given a family of models $$M$$, and our task is to learn some "good" model in $$M$$ that defines a distribution $$p$$. For example, we could look at all Bayes nets with a given graph structure, with all the possible choices of the CPD tables.
+假设定义域有著分布 $$p^* $$。我们的数据集 $$D$$ 包含分布 $$p^* $$ 的 $$m$$ 个样本。标准的假设是这些样本独立同分布(iid)。又已知一类模型 $$M$$，我们的任务是
+学习$$M$$裡面一些「好」的模型，对应一个分布 $$p$$。例如我们可以考虑
+图结构相同只是CPD表不同的一类贝叶斯网络。
 
-The goal of learning is to return a model that precisely captures the distribution $$p^*$$ from which our data was sampled. This is in general not achievable because limited data only provides a rough approximation of the true underlying distribution, and because of computational reasons.
-Still, we want to somehow select the "best" approximation to the underlying distribution $$p^*$$.
+学习的目标是得到一个模型准确再现数据样本的分布 $$p^* $$。
+一般情况下这是不可能的，因為有限的数据只能提供真正分布的一个粗略近似，还有计算上的限制。
+然而我们还是想要用否种标准选择真正分布 $$p^* $$ 最好的一个近似。
 
-What is "best" in this case? It depends on what we want to do:
+在这裡「最好」是什么意思？这取决于我们的目标：
 
-- Density estimation: we are interested in the full distribution (so later we can compute whatever conditional probabilities we want)
-- Specific prediction tasks: we are using the distribution to make a prediction, e.g. is this email spam or not?
-- Structure or knowledge discovery: we are interested in the model itself, e.g. how do some genes interact with each other?
+- 估计概率密度：我们感兴趣的是整个分布（这样我们就能计算任何有需要的条件概率）
+- 特定的预测任务：我们使用分布来预测。例如，一封邮件是不是垃圾邮件？
+- 结构或知识发现：我们感兴趣的是模型本身。例如，基因之间如何互相影响？
 
-## Maximum likelihood
+## 最大似然
 
-Let's assume that we want to learn the full distribution so that later we can answer any probabilistic inference query. In this setting we can view the learning problem as *density estimation*. We want to construct a $$p$$ as "close" as possible to $$p^*$$. How do we evaluate "closeness"? We will again use the KL divergence, which we have seen when we covered variational inference:
+假设我们现在需要学习整个概率密度，这样以后我们就能回答任何推断问题。
+这个情境中我们把学习的目标视為「估计概率密度」。我们想要建构一个 $$p$$，使其
+尽可能接近 $$p^* $$。我们怎么测量远近？我们再次动用之前讲变量推断时提到
+ KL 分歧，：
 {% math %}
-KL(p^*||p) = \sum_x p^*(x) \log \frac{p^*(x)}{p(x)} = -H(p^*) - \mathbb{E}_{x \sim p^*} [ \log p(x) ].
+KL(p^* || p) = \sum_x p^* (x) \log \frac{p^* (x)}{p(x)} = -H(p^* ) - \mathbb{E}_{x \sim p^* } [ \log p(x) ].
 {% endmath %}
 
-The first term does not depend on p; hence minimizing KL divergence is equivalent to maximizing the expected log-likelihood
+其中第一项不依赖 $$p$$，所以要最小化 KL分歧相当于最大化对数似然函数
 {% math %}
-\mathbb{E}_{x \sim p^*} [ \log p(x) ].
+\mathbb{E}_{x \sim p^* } [ \log p(x) ].
 {% endmath %}
-This objective asks that $$p$$ assign high probability to instances sampled from $$p^*$$, so as to reflect the true distribution.
-Although we can now compare models, since we are not computing $$H(p^*)$$, we don’t know how close we are to the optimum.
+这个目标函数要求 $$p$$ 给予那些从 $$p^* $$ 中采样出的值更高的概率，
+从而反映真正的分布。
+有了这个度量我们可以比较模型，但是因為我们没有计算 $$H(p^* )$$，
+我们并不知道一个模型离最优模型有多近。
 
-However, there is still a problem: in general we do not know $$p^*$$. We will thus approximate the expected log-likelihood $$\mathbb{E}_{x \sim p^*} [ \log p(x) ]$$ with the empirical log-likelihood (a Monte-Carlo estimate):
+然而还有一个问题：一般来说 $$p^* $$ 是未知的。所以我们必须用经验指数似然值
+（即蒙地卡罗估计）来近似期望的指数似然函数 $$\mathbb{E}_{x \sim p^* } [ \log p(x) ]$$：
 {% math %}
-\mathbb{E}_{x \sim p^*} [ \log p(x) ] \approx \frac{1}{|D|} \sum_{x \in D}  \log p(x), 
+\mathbb{E}_{x \sim p^* } [ \log p(x) ] \approx \frac{1}{|D|} \sum_{x \in D}  \log p(x),
 {% endmath %}
-where $$D$$ is a dataset drawn i.i.d. from $$p^*$$.
+其中 $$D$$ 是从 $$p^* $$ 中采样的独立同分布(iid)数据集。
 
-Maximum likelihood learning is then defined as
+最大似然学习法定义如下：
 {% math %}
-\max_{p \in M} \frac{1}{|D|} \sum_{x \in D}  \log p(x), 
+\max_{p \in M} \frac{1}{|D|} \sum_{x \in D}  \log p(x),
 {% endmath %}
 
-### An example
+### 例子
 
-As a simple example, consider estimating the outcome of a biased coin. Our dataset is a set of tosses and our task is to estimate the probability of heads/tails on the next flip. We assume that the process is controlled by a probability distribution $$p^*(x)$$ where $$x \in \{h,t\}$$. Our class of models $$M$$ is going to be the set of all probability distributions over $$\{h,t\}$$.
+As a simple example, consider estimating the outcome of a biased coin. Our dataset is a set of tosses and our task is to estimate the probability of heads/tails on the next flip. We assume that the process is controlled by a probability distribution $$p^* (x)$$ where $$x \in \{h,t\}$$. Our class of models $$M$$ is going to be the set of all probability distributions over $$\{h,t\}$$.
 
 How should we choose $$p$$ from $$M$$ if 60 out
 of 100 tosses are heads? Let's assume that $$p(x=h)=\theta$$ and $$p(x=t)=1−\theta$$. If our observed data is $$D = \{h,h,t,h,t\}$$, our likelihood becomes $$\prod_i p(x_i ) = \theta \cdot \theta \cdot (1 − \theta) \cdot \theta \cdot (1 − \theta)$$; maximizing this yields $$\theta = 60\%$$.
@@ -66,19 +79,18 @@ L(\theta) = \text{# heads} \cdot \log(\theta) + \text{# tails} \cdot \log(1 − 
 {% endmath %}
 for which the optimal solution is
 {% math %}
-\theta^* = \frac{\text{# heads}}{\text{# heads} + \text{# tails}}. 
+\theta^* = \frac{\text{# heads}}{\text{# heads} + \text{# tails}}.
 {% endmath %}
 
-## Likelihood, Loss and Risk
+## 似然、损失与风险函数
 
-We may now generalize this by introducing the concept of a *loss function*. A loss function $$L(x,p)$$ measures the loss that a model distribution $$p$$ makes on a
-particular instance $$x$$.
-Assuming instances are sampled from some distribution $$p^*$$, our goal is to
-find the model that minimizes the expected loss or risk,
+我们可以推广这个概念，引进「损失函数」的概念。
+损失函数 $$L(x,p)$$ 测量一个模型分布 $$p$$ 在一个数据样本 $$x$$ 上造成的损失。
+假设样本是采样 $$p^* $$ 而来，我们的目标是找到最小化预期损失，即「风险」的模型
 {% math %}
-\mathbb{E}_{x \sim p^*} [ L(x,p) ] \approx \frac{1}{|D|} \sum_{x \in D}  L(x,p), 
+\mathbb{E}_{x \sim p^* } [ L(x,p) ] \approx \frac{1}{|D|} \sum_{x \in D}  L(x,p),
 {% endmath %}
-Notice that the loss function which corresponds to maximum likelihood estimation is the log loss $$-\log p(x)$$.
+注意对应最大似然估计的损失函数值是对数损失 $$-\log p(x)$$。
 
 Another example of a loss is the conditional log-likelihood. Suppose we want to predict a set of variables $$y$$ given $$x$$, e.g., for segmentation or stereo vision. We concentrate on predicting $$p(y|x)$$, and use a conditional loss function $$L(x,y,p) = −\log p(y \mid  x).$$
 Since the loss function only depends on $$p(y \mid  x)$$, it suffices to estimate the conditional distribution, not the joint. This is the objective function we use to train conditional random fields (CRFs).
@@ -120,9 +132,9 @@ We may impose hard constraints, e.g. by selecting a less expressive hypothesis c
 
 At training, we minimize empirical loss
 {% math %}
-\frac{1}{|D|} \sum_{x \in D}  \log p(x). 
+\frac{1}{|D|} \sum_{x \in D}  \log p(x).
 {% endmath %}
-However, we are actually interested in minimizing 
+However, we are actually interested in minimizing
 {% math %}
 \mathbb{E}_{x \sim p^*} [ \log p(x) ].
 {% endmath %}
@@ -147,7 +159,7 @@ Taking logs and combining like terms, this becomes
 Thus, maximization of the (log) likelihood function decomposes into separate maximizations for the local conditional distributions!
 This is essentially the same as the head/tails example we saw earlier (except with more categories). It's a simple calculus exercise to formally show that
 {% math %}
-\theta^*_{x_i \mid pa(x_i)} = \frac{\#(x_i, pa(x_i))}{\#(pa(x_i))}. 
+\theta^*_{x_i \mid pa(x_i)} = \frac{\#(x_i, pa(x_i))}{\#(pa(x_i))}.
 {% endmath %}
 
 We thus conclude that in Bayesian networks with discrete variables, the maximum-likelihood estimate has a closed-form solution. Even when the variables are not discrete, the task is equally simple: the log-factors are linearly separable, hence the log-likelihood reduces to estimating each of them separately. The simplicity of learning is one of the most convenient features of Bayesian networks.

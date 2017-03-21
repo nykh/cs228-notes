@@ -1,53 +1,48 @@
 ---
 layout: post
-title: MAP inference
+title: 最大後驗概率推断
 ---
-This section will explore in more detail the problem of MAP inference in graphical models. 
-Recall that MAP inference in a graphical model $$p$$ corresponds to the following optimization problem:
+这篇笔记会更加深入讨论MAP(最大后验概率)推断问题。
+图模型中的最大后验概率推断可以看作以下优化问题：
 {% math %}
 \max_x \log p(x) = \max_x \sum_c \phi_c(\bfx_c) - \log Z.
 {% endmath %}
 
-In the previous section, we briefly showed how to solve this problem within the same message passing framework as marginal inference. We will now look at more efficient specialized methods.
+上一篇笔记中，我们简短介绍了怎么跟计算边缘推断一样使用信息传递的框架来解决MAP推断问题。这篇将会讲一些更高效的专门算法。
 
-## The challenges of MAP inference
+## MAP推断的挑战性
 
-In a way, MAP inference is easier than marginal inference. One reason for this is that the intractable partition constant $$\log Z$$ does not depend on $$x$$ and can be ignored:
+某种意义上来说，MAP推断比边缘推断简单。一个原因是因為标准化常数$$\log Z$$ 与$$x$$无关，可以不用计算。
 {% math %}
 \arg \max_x \sum_c \phi_c(\bfx_c).
 {% endmath %}
 
-Marginal inference can also be seen as computing and summing all assignments to the model, one of which is the MAP assignment. If we replace summation with maximization, we can also find the assignment with the highest probability; however, there exist more efficient methods than this sort of enumeration-based approach.
+边缘推断可以被视為计算一个模型所有赋值的概率然后求和。这些赋值中有一个对应最大后验概率，所以如果我们把求和运算替换為求最大值运算，就能求得概率最高的赋值。然而这种基于穷举的算法不是最有效率的。
 
-Note, however, that MAP inference is still not an easy problem in the general case.
-The above optimization objective includes many intractable problems as special cases, e.g. 3-sat. We may reduce 3-sat to MAP inference by constructing for each clause $$ c = (x \lor y \lor \neg z)$$ a factor $$\theta_c (x, y, z)$$ that equals one if $$x, y, z$$ satisfy
-clause $$c$$, and $$\theta_c (x, y, z) = 0$$ otherwise. Then, the 3-sat instance is satisfiable if and only if the value of the MAP assignment equals the number of clauses{% sidenote 1 'We may also use a similar construction to prove that marginal inference is NP-hard. The high-level idea is to add an additional variable $$X$$ that equals $$1$$ when all the clauses are satisfied, and zero otherwise. Its marginal probability will be greater than zero iff the 3-sat instance is satisfiable.'%}.
+值得注意的是，MAP推断仍然不是一般意义上的简单问题。上述的优化问题的特例中包含了许多难解的问题，例如**3SAT**问题。我们可以将一个3SAT问题简化成MAP推断问题：对于3SAT的每个条件式 $$c = (x \lor y \lor \neg z)$$ 建构一个因子 $$\theta_c (x, y, z)$$，当 $$x, y, z$$ 满足条件 $$c$$ 时取1，否则取0。如此一来，这个3SAT问题有解当且仅当对应MAP的赋值相等于条件的数目{% sidenote 1 '我们也可以类似地证明边缘推断是NP困难的。主要思想是加入一个变量$$X$$，当所有条件皆满足时取1，否则取0。则边缘概率大于0当且仅当对应3SAT问题有解。'%}。
 
-Nonetheless, we will see that the MAP problem is easier than general inference, in the sense that there are some models in which MAP inference can be solved in polynomial time, while general inference is NP-hard.
+不论如何，可以证明MAP问题比一般的推断问题简单，因為有些模型的MAP推断问题是多项式时间内可解而一般推断问题是NP困难的。
 
-### Examples
+### 例子
 
-Many interesting examples of MAP inference are instances of *structured prediction*, which involves doing inference in a conditional random field (CRF) model $$p(y|x)$$:
+MAP许多有趣的例子来自*结构预测*。要解决结构预测问题需要在一个CRF模型$$p(y|x)$$上推断：
 {% math %}
 \arg \max_y \log p(y|x) =  \arg \max_y \sum_c \phi_c(\bfy_c, \bfx_c).
 {% endmath %}
 
-{% marginfigure 'ocr' 'assets/img/ocr.png' 'Chain-structured conditional random field for optical character recognition.' %}
-We discussed structured prediction in detail when we covered CRFs.
-Recall that our main example was handwriting recognition, in which we are given 
-images $$x_i \in [0, 1]^{d\times d}$$ of characters in the form of pixel matrices; MAP inference in this setting amounts to jointly recognizing the most likely word $$(y_i)_{i=1}^n$$ encoded by the images.
+{% marginfigure 'ocr' 'assets/img/ocr.png' 'OCR用的单链型CRF' %}
+之前讲到CRF时我们已经深入讨论了结构预测问题。记得我们主要的例子是识别手写字：输入英文字母的图像矩阵 $$x_i \in [0, 1]^{d\times d}$$，这个框架下的MAP推断相等于联合地识别图像中最有可能的词 $$(y_i)_{i=1}^n$$
 
-Another example of MAP inference is image segmentation; here, we are interested in locating an entity in an image and label all its pixels. Our input $$\bfx \in [0, 1]^{d\times d}$$ is a matrix of image pixels, and our task is to predict the label $$y \in \{0, 1\}^{d\times d}$$, indicating whether each pixel encodes the object we want to recover. Intuitively, neighboring pixels should have similar values in $$\bfy$$, i.e. pixels associated with the horse should form one continuous blob (rather than white noise).
-{% marginfigure 'ocr' 'assets/img/imagesegmentation.png' 'An illustration of the image segmentation problem.' %}
+另一个例子是图形分区。在分区问题裡，我们想要识别图像中的物体并标记所有属于该物体的像素。输入 $$\bfx \in [0, 1]^{d\times d}$$ 是像素矩阵，我们的任务是预测标记矩阵 $$y \in \{0, 1\}^{d\times d}$$，1表示$$x$$的对应像素属于物体。直觉来说，邻近的像素应该有相似的标记（一匹马的像素应该是连续体而不是到处都有的白噪音）。
+{% marginfigure 'ocr' 'assets/img/imagesegmentation.png' '图形分区问题示例' %}
 
-This prior knowledge can be naturally modeled in the language of graphical models via a [Potts model](https://en.wikipedia.org/wiki/Potts_model). As in our first example, we can introduce potentials $$\phi(y_i,x)$$ that encode the likelihood that any given pixel is from our subject. We then augment them with pairwise potentials $$\phi(y_i, y_j )$$ for neighboring $$y_i, y_j$$, which will encourage adjacent $$y$$'s to have the same value with higher probability.
+我们可以很自然地用使用[Potts 模型](https://en.wikipedia.org/wiki/Potts_model)表达这个先验知识。在之前的例子中，我们可以引入势 $$\phi(y_i,x)$$ 表达一个像素属于物体的似然率。然后我们用成对的势 $$\phi(y_i, y_j )$$ 来表达邻近像素的标记 $$y_i, y_j$$，以强调相邻的$$y$$有更高概率具有相同的标记值。
 
-## Graphcuts
+## 图割
 
-We will start our discussion with an efficient exact MAP inference algorithm for certain Potts models.
-Unlike previously-seen methods (e.g. the junction tree algorithm), this algorithm will be tractable even when the model has large treewidth.
+现在我们讨论一个适用特定Potts模型的，高效的精确MAP推断算法。与之前的方法（例如联合树）不同，就算模型有很高的树宽度，这个算法仍然可以接受。
 
-Suppose we are given a binary pairwise MRF in which edge energies (i.e. log-edge factors) have the form
+假设我们有二进制二元马可夫网络，其中边能量（边因子的对数）有以下形式
 {% math %}
 E_{uv}(x_u, x_v) =
 \begin{cases}
@@ -55,63 +50,55 @@ E_{uv}(x_u, x_v) =
 \lambda_{st} & \; \text{if} \; x_u \neq x_v,
 \end{cases}
 {% endmath %}
-where $$\lambda_{st} \geq 0$$ is a cost that penalizes edge mismatches.
-Assume also that nodes have unary potentials; we can always normalize the nodes' energies so that $$E_u(1) = 0$$ or $$E_u(0) = 0$$ and $$E_u \geq 0$$.
+其中成本 $$\lambda_{st} \geq 0$$ 惩罚边不匹配的边势。
+再假设每个节点有一元势。我们可以标准化节点的能量，以使 $$E_u(1) = 0$$ 或者 $$E_u(0) = 0$$ 并且 $$E_u \geq 0$$。
 
 
-{% marginfigure 'mincut' 'assets/img/mincut.png' 'Formulating the segmentation task in a 2x2 MRF as a graph cut problem. Dashed edges are part of the min-cut. (Source: Machine Learning: A Probabilistic Perspective).' %}
-The motivation for this model comes from image segmentation. We are looking for an assignment that minimizes the energy, which (among other things) tries to reduce discordance between adjacent variables.
+{% marginfigure 'mincut' 'assets/img/mincut.png' '一个2x2 马可夫网络上的图像分区任务可以表示為一个图割问题。虚线边属于最小割。（来源: Machine Learning: A Probabilistic Perspective）' %}
+这个模型的发明要感谢图形分区问题。我们想求一个赋值使得能量最小，这也会试图减少相邻变量间的不协调。
 
-We can formulate energy minimization in this type of model as a min-cut problem in an augmented graph $$G'$$:
-we construct $$G'$$ by adding special source and sink nodes $$s,t$$ to our PGM graph; 
-the node $$s$$ is connected to nodes $$u$$ with $$E_u(0) = 0$$ by an edge with weight $$E_u(1)$$; 
-the node $$t$$ is connected to nodes $$v$$ with $$E_v(1) = 0$$ by an edge with weight $$E_v(0)$$.
-Finally, all the edges of the original graph get $$E_{uv}$$ as their weight.
+可以把这类模型的能量最小化过程看作是在一个增补图$$G'$$中的最小割问题：
+在概率图模型中加入源与汇节点$$s,t$$；令$$s$$连结到 $$E_u(0) = 0$$ 的节点$$u$$，其边权重為 $$E_u(1)$$；又令 $$E_v(1) = 0$$ 的节点$$v$$连结到$$t$$，其边权重為 $$E_v(0)$$。最后将所有原图中的边的权重设為 $$E_{uv}$$。
 
-It is not hard to see that by construction,
-the cost of a min-cut in this graph will equal the minimum energy in the model. In particular, all nodes on the $$s$$ side of the cut receive an assignment of $$0$$, and all the ones that are on the $$t$$ side receive an assignment of one. The edges between the nodes that disagree are precisely the ones that are in the min-cut.
+很容易理解这个建构使得图中最小割的费用等于原本模型的最小能量。特别的是，切割后所有在源一侧的节点都取$$0$$，而汇一侧的节点都取$$1$$。所有连接两个不同值节点的边组成最小割的集合。
 
-The fastest algorithms for computing min-cuts in a graph $$G=(V,E)$$ take $$O(EV\log V)$$ or $$O(V^3)$$ time. Similar techniques can also be applied in slightly more general types of models with a certain type of edge potentials that are called *submodular*. We refer the reader to a textbook (e.g. Koller and Friedman) for more details.
+在一个图$$G=(V,E)$$上计算最小割最快算法需要$$O(EV\log V)$$或$$O(V^3)$$。类似的技巧也适用于更加一般的模型，只要它们的边势满足「分模」（*submodular*）性质。详情请见教科书(例如Koller and Friedman)。
 
-## Linear programming-based approaches
+## 基于线性规划的方法
 
-Although graphcut-based methods recover the exact MAP assignment, they are only applicable in certain restricted classes of MRFs. 
-The algorithms we will see next solve the MAP problem approximately, but apply to much larger classes of graphical models.
+虽然图分割方法可以求得精确的MAP赋值，却只适用特定种类的马可夫网络。我们接下来介绍一个适用范围更广的近似算法。
 
-### Linear programming
+### 线性规划
 
-Our first approximate inference strategy consists in reducing MAP inference to integer linear programming.
-Linear programming (LP) --- also known as linear optimization --- refers to a class of problems of the form
+我们的第一个近似推断策略是把MAP推断归约成整数线性规划。**线性规划**指的是下面类别的问题
 {% math %}
 \begin{align*}
 \min \;& \bf{c} \cdot \bfx \\
 \textrm{s.t. } & A \bfx \leq \bf{b}
 \end{align*}
 {% endmath %}
-where $$\bfx \in \mathbb{R}^n$$, and $$\bf{c}, \bf{b} \in \mathbb{R}^n$$, $$A\in \mathbb{R}^{n\times n}$$ are problem parameters.
+其中$$\bfx \in \mathbb{R}^n$$、$$\bf{c}, \bf{b} \in \mathbb{R}^n$$、$$A\in \mathbb{R}^{n\times n}$$是参数。
 
-Problems of this form are found in almost every field of science and engineering. 
-They have been extensively studied since the 30's, which has led to both an extensive theory{% sidenote 1 "A major breakthrough of applied mathematics in the 80's was the development polynomial-time [algorithms](https://en.wikipedia.org/wiki/Karmarkar%27s_algorithm) for linear programming."%}, as well as
-practical [tools](https://en.wikipedia.org/wiki/CPLEX) that can solve very large LP instances (100,000 variables or more) in a reasonable time.
+这类问题在理工各领域都很常见，在30年代已经研究得很透彻，产生了一个很庞大的理论{% sidenote 1 "80年代应用数学的一个重大突破是发现了线性规划的多项式时间[算法](https://en.wikipedia.org/wiki/Karmarkar%27s_algorithm)。"%}及实用[工具](https://en.wikipedia.org/wiki/CPLEX)，用来在可接受的时间内解很大(十万或更多变数)的线性规划问题实例。
 
-Integer linear programming (ILP) is an extension of linear programming in which we also require that $$\bfx \in \{0, 1\}^n$$. Unfortunately, this makes optimization considerably more difficult, and ILP is in general NP-hard. Nonetheless, there are many heuristics for solving ILP problems in practice, and commercial solvers can handle instances with thousands of variables or more.
+整数线性规划(ILP)是线性规划问题加上条件 $$\bfx \in \{0, 1\}^n$$。不妙的是这个附加条件使得优化过程明显变难，一般情况下变成NP困难。然而实际上有许多啟发技巧可以对ILP问题求解。有些商用求解程序可以处理几千个变量的实例。
 
-One of the main techniques for solving ILP problems is *rounding*. The idea of rounding is to relax the requirement that $$\bfx \in \{0, 1\}^n$$ into $$0 \leq \bfx \leq 1$$, solve the resulting LP, and then round the LP solution to its nearest integer value. This approach works surprisingly well in practice and has theoretical guarantees for some classes of ILPs.
+整数线性规划求解问题的主要技巧是*舍入*。主要思想是把 $$\bfx \in \{0, 1\}^n$$ 这个条件放松成 $$0 \leq \bfx \leq 1$$ 求解，再把解四舍五入成整数值。这个方法在实践中效果出奇得好，并且对某些种类的整数线性规划问题有理论保证。
 
-### Formulating MAP inference as ILP
+### 把MAP推断问题表达為整数线性规划
 
-For simplicity, let's look at MAP in pairwise MRFs. We can reduce the MAP objective to integer linear programming by introducing two types of indicator variables:
+為求简单我们考虑一个在二元马可夫网络中的MAP问题。我们可以把MAP目标简化成整数线性规划，只须引入两种指示函数。
 
-- A variable $$\mu_i(x_i)$$ for each $$i \in V$$ and state $$x_i$$.
-- A variable $$\mu_{ij}(x_i,x_j)$$ for each edge $$(i,j) \in E$$ and pair of states $$x_i,x_j$$.
+- 对每个节点 $$i \in V$$ 的状态 $$x_i$$ 引入变数 $$\mu_i(x_i)$$
+- 对每条边 $$(i,j) \in E$$ 对应的状态$$x_i,x_j$$引入变数 $$\mu_{ij}(x_i,x_j)$$
 
-We can rewrite the MAP objective in terms of these variables as
+有了这些变数我们就能把MAP目标改写為
 {% math %}
 \max_\mu \sum_{i \in V} \sum_{x_i} \theta_i (x_i) \mu_i(x_i) + \sum_{i,j \in E} \sum_{x_i, x_j} \theta_{ij} (x_i, x_j) \mu_{ij}(x_i, x_j).
 {% endmath %}
 
-We would like to optimize over these $$\mu$$'s; for that we also need to introduce constrains.
-First, we need to force each cluster to choose a local assignment:
+為了在这些 $$\mu$$ 的基础上优化我们还必须引入条件。
+首先，我们强迫每个集群取一个本地赋值：
 {% math %}
 \begin{align*}
 \mu_i(x_i) & \in \{0,1\} \; \forall \, i, x_i \\
@@ -121,7 +108,7 @@ First, we need to force each cluster to choose a local assignment:
 \end{align*}
 {% endmath %}
 
-These assignments must also be consistent:
+这些赋值还必须有一致性：
 {% math %}
 \begin{align*}
 \sum_{x_i} \mu_{ij}(x_i, x_j) & = \mu_j(x_j) \; \forall \, i,j \in E, x_j \\
@@ -129,107 +116,111 @@ These assignments must also be consistent:
 \end{align*}
 {% endmath %}
 
-Together, these constraints along with the MAP objective yield an integer linear program, whose solution equals the MAP assignment.
-This ILP is still NP-hard, but we have an easy way to transform this into an (easy to solve) LP via relaxation. This is the essence of the linear programming approach to MAP inference.
+这些约束与MAP目标函数一同定义了一个整数线性规划问题，其解相等于MAP赋值。这个整数线性规划问题实例仍然是NP困难的，但我们有办法把它放松成（简单可解的）线性规划问题。这就是基于线性规划的MAP方法的主要思想
 
-In general, this method will only give approximate solutions. An important special case are tree-structured graphs, in which the relaxation is guaranteed to always return integer solutions, which are in turn optimal{% sidenote 1 "See e.g. the textbook of Koller and Friedman for a proof and a more detailed discussion."%}.
+一般而言，这个方法仅能求近似解。重要的例外是对树型图而言，放松可以保证得出整数解，因此这个解是最优的。{% sidenote 1 "例如见课本 Koller and Friedman，内有证明与深入讨论。"%}.
 
-## Dual decomposition
+## 对偶分解方法
 
-Let us now look at another way to transform the MAP objective into a more amenable optimization problem.
-Suppose that we are dealing with an MRF of the form
+现在我们看怎么把MAP目标转化成更适合的优化问题。
+假设有如下形式的马可夫网络
 {% math %}
-\max_x \sum_{i \in V} \theta_i (x_i) + \sum_{f \in F} \theta_{f} (x_f),
+\max_x \sum_{i \in V} \theta_i (x_i) + \sum_{f \in F} \theta_{f}(x_f),
 {% endmath %}
-where $$F$$ denote arbitrary factors (e.g. the edge potentials in a pairwise MRF){% sidenote 1 "These short notes are roughly based on the tutorial by [Sontag et al.](http://cs.nyu.edu/~dsontag/papers/SonGloJaa_optbook.pdf), to which we refer the reader for a full discussion."%}. Let us use $$p^*$$ to denote the optimal value of this objective and let $$x^*$$ denote the optimal assignment.
+其中 $$F$$ 表示某个因子（例如二元马可夫网络中的边势）{% sidenote 1 "这些简短的推导大致基于[Sontag等人](http://cs.nyu.edu/~dsontag/papers/SonGloJaa_optbook.pdf)的教学，有兴趣看完整内容的读者可以参阅。"%}。我们让 $$p^*$$ 表示这个目标函数的最优值，$$x^*$$ 表示最优赋值。
 
-The above objective is difficult to optimize because the potentials are coupled. Consider for a moment an alternative objective where we optimize the potentials separately:
+上述的目标很难优化，因為势与势之间存在耦合。现在我们先考虑另一个目标函数，单独最优化每个势：
 {% math %}
 \sum_{i \in V} \max_{x_i}  \theta_i (x_i) + \sum_{f \in F} \max_{x^f} \theta_{f} (x^f) .
 {% endmath %}
 
-This would be easy optimize, but would only give us an upper bound on the value of the true MAP assignment.
-To make our relaxation tight, we would need to introduce
-constraints that encourage consistency between the potentials:
-{% math %} 
+优化这个很简单，但是结果只是真正MAP赋值的一个上界。要让我们的松弛更，我们需要引入势之间一致的约束：
+{% math %}
 x^f_i - x_i = 0 \; \forall f, \forall i \in f.
 {% endmath %}
-The dual decomposition approach consists in softening these constraints in order to achieve a middle ground between the two optimization objective defined above.
+对偶分解方法主要思想是放松这些约束，从而在这两个目标函数之间取得平衡。
 
-We will achieve this by first forming
-the *Lagrangian* for the constrained problem, which is
+首先我们取含约束条件问题的**拉格朗日乘数**，即
 {% math %}
 L(\delta, \bfx^f, \bfx) = \sum_{i \in V}  \theta_i (x_i) + \sum_{f \in F} \theta_{f} (x^f) + \sum_{f \in F} \sum_{i \in f} \sum_{x'_i} \delta_{fi}(x_i')\left( \Ind_{x'_i = x_i} - \Ind_{x'_i = x^f_i} \right).
 {% endmath %}
 
-The $$\delta$$ variables are called Lagrange *multipliers*; each of them is associated with a constraint{% sidenote 1 "There is a very deep and powerful theory of constrained optimization centered around Lagrangians. We refer the reader to a course on [convex optimization](http://stanford.edu/class/ee364a/) for a thorough discussion."%}. 
-Observe that $$x, x^f = x^*$$ is a valid assignment to the Lagrangian; its value equals $$p^*$$ for any $$\delta$$, since the Lagrange multipliers are simply multiplied by zero. This shows that the Lagrangian is an upper bound on $$p^*$$:
+变数 $$\delta$$ 称作拉格朗日乘数。每一个 $$\delta$$ 都对应一个条件{% sidenote 1 "围绕拉格朗日乘数有一个很深刻且强大的理论，用来在约束条件下进行优化。更加深入的内容参见[凸优化课程](http://stanford.edu/class/ee364a/)"%}。
+注意 $$x, x^f = x^*$$ 是拉格朗日乘数的一个合法赋值。其对应目标函数值相当于任意 $$\delta$$ 的 $$p^*$$，
+因為拉格朗日乘数只是乘以 0。可见拉格朗日是 $$p^*$$ 的上界：
 {% math %}
 L(\delta) := \max_{\bfx^f, \bfx} L(\delta, \bfx^f, \bfx) \geq p^* \; \forall \delta.
 {% endmath %}
 
-In order to get the tightest such bound, we may optimize $$L(\delta)$$ over $$\delta$$. It turns out that by the theory of Lagarange duality, at the optimal $$\delta^*$$, this bound will be exactly tight, i.e.
+為了求得上确界，我们在 $$\delta$$ 上优化 $$L(\delta)$$。根据拉格朗日对偶性理论，最佳的 $$\delta^*$$ 对应上确界，即
 {% math %}
 L(\delta^*) =  p^*.
 {% endmath %}
 
-It is actually not hard to prove this in our particular setting.
-To see that, note that we can reparametrize the Lagrangian as:
+在我们的问题中这其实不难证明。注意我们可以把拉格朗日乘数重新设定為：
 {% math %}
 \begin{align*}
-L(\delta) 
+L(\delta)
 & = \sum_{i \in V} \max_{x_i} \left( \theta_i (x_i) + \sum_{f:i \in f} \delta_{fi}(x_i) \right) + \sum_{f \in F} \max_{x^f} \left( \theta_f (x^f) + \sum_{i \in f} \delta_{fi}(x_i) \right) \\
 & := \sum_{i \in V} \max_{x_i} \bar \theta_{i}^\delta (x_i) + \sum_{f \in F} \max_{x^f} \bar \theta_{f}^\delta (x^f).
 \end{align*}
 {% endmath %}
 
-Suppose we can find dual variables $$\bar \delta$$ such that the local maximizers of $$\bar \theta_{i}^{\bar \delta} (x_i)$$ and $$\bar \theta_{f}^{\bar \delta} (x^f)$$ agree; in other words, we can find a $$\bar x$$ such that $$\bar x_i \in \arg\max_{x_i} \bar \theta_{i}^{\bar \delta} (x_i)$$ and $$\bar x^f \in \arg\max_{x^f} \bar \theta_{f}^{\bar \delta} (x^f)$$. Then we have that
+假设我们能找到对偶变量 $$\bar \delta$$，使得局部最大值对应的参数 $$\bar \theta_{i}^{\bar \delta} (x_i)$$ 和 $$\bar \theta_{f}^{\bar \delta} (x^f)$$ 一致，也就是说，假设我们能找到 $$\bar x$$，使得 $$\bar x_i \in \arg\max_{x_i} \bar \theta_{i}^{\bar \delta} (x_i)$$ 且 $$\bar x^f \in \arg\max_{x^f} \bar \theta_{f}^{\bar \delta} (x^f)$$。则有
 {% math %}
 L(\bar \delta) =  \sum_{i \in V} \bar \theta_{i}^{\bar\delta} (\bar x_i) + \sum_{f \in F} \bar \theta_{f}^{\bar\delta} (\bar x^f) =  \sum_{i \in V} \theta_{i} (\bar x_i) + \sum_{f \in F} \theta_{f} (\bar x^f).
 {% endmath %}
-The first equality follows by definition of $$L(\delta)$$, while the second follows holds because terms involving Lagrange multipliers cancel out when $$x$$ and $$x^f$$ agree.
+第一个等式来自 $$L(\delta)$$ 的定义，第二个是因為拉格朗日乘数项在$$x$$和 $$x^f$$一致时相消
 
-On the other hand, we have by the definition of $$p^*$$ that
+另一方面，由 $$p^*$$ 的定义有
 {% math %}
 \sum_{i \in V} \theta_{i} (\bar x_i) + \sum_{f \in F} \theta_{f} (\bar x^f) \leq p^* \leq L(\bar\delta)
 {% endmath %}
-which implies that $$L(\bar\delta) = p^*$$.
+蕴含 $$L(\bar\delta) = p^*$$.
 
-This argument has shown two things:
+以上论证说明两件事：
 
-- The bound given by the Lagrangian can be made tight for the right choice of $$\delta$$.
-- To compute $$p^*$$, it suffices to find a $$\delta$$ at which the local sub-problems agree with each other. This happens surprisingly often in practice.
+- 拉格朗日乘数求得的上界只要对应合适的$$\delta$$就可以是上确界
+- 要计算 $$p^*$$ 只需要求 $$\delta$$ 使得局部子问题彼此一致，实践中这很容易达到。
 
+### 最小化目标函数
 
-### Minimizing the objective
+这裡简介几种计算 $$L(\delta^*)$$ 的方法。
 
-There exist several ways of computing $$L(\delta^*)$$, of which we will give a brief overview. 
+因為目标函数 $$L(\delta)$$ 是连续凹函数{% sidenote 1 "这个目标函数对每个点的仿射函数取最大值。"%}，我们可以用子梯度下降法来最小化。
+令 $$\bar x_i \in \arg\max_{x_i} \bar \theta_{i}^{\delta} (x_i)$$ 和 $$\bar x^f \in \arg\max_{x^f} \bar \theta_{f}^\delta (x^f)$$。
+可以证明 $$L(\delta)$$ 关于 $$\delta_{fi}(x_i)$$ 的梯度 $$g_{fi}(x_i)$$  等于 $$1$$ 如果 $$\bar x_i^f \neq \bar x_i$$，否则等于 0。
+类似的 $$g_{fi}(x_i^f)$$ 等于 $$-1$$ 若 $$\bar x_i^f \neq \bar x_i$$ 否则等于 0。
+这个表达式会降低 $$\bar \theta_{i}^{\delta} (\bar x_i)$$ 并增大 $$\bar \theta_{f}^\delta (\bar x^f)$$，直到他们彼此接近。
 
-Since the objective $$L(\delta)$$ is continuous and convex{% sidenote 1 "The objective is a pointwise max of a set of affine functions."%}, we may minimize it using subgradient descent. Let $$\bar x_i \in \arg\max_{x_i} \bar \theta_{i}^{\delta} (x_i)$$ and let $$\bar x^f \in \arg\max_{x^f} \bar \theta_{f}^\delta (x^f)$$. It can be shown that the gradient $$g_{fi}(x_i)$$ of $$L(\delta)$$ w.r.t. $$\delta_{fi}(x_i)$$ equals $$1$$ if $$\bar x_i^f \neq \bar x_i$$ and zero otherwise; similarly, $$g_{fi}(x_i^f)$$ equals $$-1$$ if $$\bar x_i^f \neq \bar x_i$$ and zero otherwise. This expression has the effect of decreasing $$\bar \theta_{i}^{\delta} (\bar x_i)$$ and increasing $$\bar \theta_{f}^\delta (\bar x^f)$$, thus bringing them closer to each other.
+要计算这些梯度我们进行运算 $$\bar x_i \in \arg\max_{x_i} \bar \theta_{i}^{\delta} (x_i)$$ 以及 $$\bar x^f \in \arg\max_{x^f} \bar \theta_{f}^\delta (x^f)$$。
+有一些有用的特殊情况下这是可能的，例如当因数的作用域很小、图的树宽度很窄、或是当因数在大部份定义域上不变时。
 
-To compute these gradients we need to perform the operations $$\bar x_i \in \arg\max_{x_i} \bar \theta_{i}^{\delta} (x_i)$$ and $$\bar x^f \in \arg\max_{x^f} \bar \theta_{f}^\delta (x^f)$$. This is possible if the scope of the factors is small, if the graph has small tree width, if the factors are constant on most of their domain, and in many other useful special cases.
+另一个最小化 $$L(\delta)$$ 的方法是使用区块坐标下降（block coordinate descent）。典型产生区块的方法是考虑某个特定因子 $$f$$ 对应的所有变数 $$\delta_{fi}(x_i)$$。这样得出的迭代很类似有环的最大值-积信念传播。实践中这个方法可能比子梯度下降法更快，并且保证每次迭代目标函数都会下降，并且不需要速度参数。区块坐标下降的缺点是不一定会找到全局最小值（因為目标函数不是「*强*」凹函数）
 
-An alternative way of minimizing $$L(\delta)$$ is via block coordinate descent. A typical way of forming blocks is to consider all the variables $$\delta_{fi}(x_i)$$ associated with a fixed factor $$f$$. This results in updates that are very similar to loopy max-product belief propagation. In practice, this method may be faster than subgradient descent, is guaranteed to decrease the objective at every step, and does not require tuning a step-size parameter. Its drawback is that it does not find the global minimum (since the objective is not *strongly* convex).
+### 恢复MAP赋值
 
-### Recovering the MAP assignment
+如上所述，只要一个解  $$\bfx, \bfx^f$$ 的因子对于某个 $$\delta$$ 相等，我们就能保证这个解是最优的。
 
-As we have seen above, if a solution $$\bfx, \bfx^f$$ agrees on the factors for some $$\delta$$, then we can guarantee that this solution is optimal.
+如果最优的 $$\bfx, \bfx^f$$ 不相等，要从这对解中得到 MAP 赋值仍然是个 NP完全问题。
+但是实践中并不是那么困难。从理论保证上来说，如果每个 $$\bar \theta_i^{\delta^*}$$ 有独特的最大值，那么这个问题是可决定的。
+如果不是所有变数都能保证如此，我们可以抓住那些可以解析到最优值的变量，再用精确推断得到剩下的变量。
 
-If the optimal $$\bfx, \bfx^f$$ do not agree, finding the MAP assignment from this solution is still NP-hard. However, this is usually not a big problem in practice. From the point of view of theoretical guarantees, if each $$\bar \theta_i^{\delta^*}$$ has a unique maximum, then the problem will be decodable. If this guarantee is not met by all variables, we can clamp the ones that can be uniquely decoded to their optimal values and use exact inference to find the remaining variables' values.
+## 其他方法
 
-## Other methods
+### 局部搜索
 
-### Local search
-
-A more heuristic-type solution consists in starting with an arbitrary assignment and perform "moves" on the joint assignment that locally increase the probability. This technique has no guarantees; however, we can often use prior knowledge to come up with highly effective moves. Therefore, in practice, local search may perform extremely well.
+一个更加啟发式的方法，从一个随机赋值出发然后在赋值的空间裡往局部增加概率的方向「移动」。这个方法没有理论保证，但是依靠先验知识我们通常可以找出很有效的移动方式。所以实践中局部搜索可以很有效。
 
 ### Branch and bound
 
-Alternatively, one may perform exhaustive search over space of assignments, while pruning branches that can be provably shown not to contain a MAP assignment. The LP relaxation or its dual to obtain upper bounds useful for pruning trees.
+或者也可以穷举所有赋值，并一边淘汰掉显然不含MAP赋值的分支。
+可以使用线性规划松弛或是其对偶问题得到上界来简枝。
 
-### Simulated annealing
+### 模拟退火
 
-A third approach is to use sampling methods (e.g. Metropolis-Hastings) to sample from $$p_t(x) \propto \exp(\frac{1}{t} \sum_{c \in C} \theta_c (x_c ))$$. The parameter $$t$$ is called the temperature. When $$t \to \infty $$, $$p_t$$ is close to the uniform distribution, which is easy to sample from. As $$t \to 0$$, $$p_t$$ places more weight on $$\arg\max_\bfx \sum_{c \in C} \theta_c (x_c )$$, the quantity we want to recover. However, since this distribution is highly peaked, it is also very difficult to sample from.
+第三个作法是用取样方法（例如Metropolis-Hastings）来从 $$p_t(x) \propto \exp(\frac{1}{t} \sum_{c \in C} \theta_c (x_c ))$$ 中取样。
+其中参数 $$t$$ 称作「温度」。当 $$t \to \infty $$，$$p_t$$ 会接近均匀分布，很容易取样。当 $$t \to 0$$，$$p_t$$ 会更加偏向 $$\arg\max_\bfx \sum_{c \in C} \theta_c (x_c )$$，即我们想求得的值。然而因為后者有明显的峰值，这会很难取样。
 
-The idea of simulated annealing is to run a sampling algorithm starting with a high $$t$$, and gradually decrease it, as the algorithm is being run. If the "cooling rate" is sufficiently slow, we are guaranteed to eventually find the mode of our distribution. In practice, however, choosing the rate requires a lot of tuning. This makes simulated annealing somewhat difficult to use in practice.
-
+模拟退火的基本思想是运行一个采样算法，从很高的 $$t$$ 出发，然后慢慢减少 $$t$$ 。
+如果「冷却」足够慢，就有保证会找到分布的眾数。然而实践中找到冷却速度需要很多微调，因此不是很容易使用。
