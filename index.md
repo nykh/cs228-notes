@@ -33,7 +33,7 @@ title: 目录
 
 4. [抽样推断](inference/sampling/)：蒙地卡罗抽样法。重要性抽样。马可夫链蒙地卡罗法。推断中的应用。
 
-5. [Variational inference](inference/variational/)：Variational lower bounds、Mean Field、Marginal polytope与其条件松弛。
+5. [变量推断](inference/variational/)：Variational lower bounds、Mean Field、Marginal polytope与其条件松弛。
 
 ## 学习
 
@@ -52,3 +52,7 @@ title: 目录
 1. [变自编码器](extras/vae)：一种深度生成模型、重新赋予参数的技巧。学习隐含的视觉表现。
 
 2. 延伸阅读列表：结构性支持向量机。贝叶斯的非参数性模型。
+
+## 关于翻译
+
+[译名对照表](extras/glossary)
