@@ -39,8 +39,8 @@ Before, we start our discussion of learning, let's first reflect on what it mean
 
 假设我们现在需要学习整个概率密度，这样以后我们就能回答任何推断问题。
 这个情境中我们把学习的目标视為「估计概率密度」。我们想要建构一个 $$p$$，使其
-尽可能接近 $$p^* $$。我们怎么测量远近？我们再次动用之前讲变量推断时提到
- KL 分歧，：
+尽可能接近 $$p^* $$。我们怎么测量远近？我们动用之前讲变量推断时提到过的
+KL 分歧：
 {% math %}
 KL(p^* || p) = \sum_x p^* (x) \log \frac{p^* (x)}{p(x)} = -H(p^* ) - \mathbb{E}_{x \sim p^* } [ \log p(x) ].
 {% endmath %}
@@ -92,74 +92,86 @@ for which the optimal solution is
 {% endmath %}
 注意对应最大似然估计的损失函数值是对数损失 $$-\log p(x)$$。
 
-Another example of a loss is the conditional log-likelihood. Suppose we want to predict a set of variables $$y$$ given $$x$$, e.g., for segmentation or stereo vision. We concentrate on predicting $$p(y|x)$$, and use a conditional loss function $$L(x,y,p) = −\log p(y \mid  x).$$
-Since the loss function only depends on $$p(y \mid  x)$$, it suffices to estimate the conditional distribution, not the joint. This is the objective function we use to train conditional random fields (CRFs).
+另一个损失函数的例子是条件指数似然率。假设我们已知 $$x$$ 想预测一组变量 $$y$$，例如图形分区问题或立体视觉问题。我们集中在预测 $$p(y|x)$$
+并使用条件损失函数 $$L(x,y,p) = −\log p(y \mid  x).$$
+因為这个条件函数只依赖 $$p(y \mid  x)$$，只需要估计条件分布，
+不需要估计整个联合分布。训练条件随机场时使用的是这个目标函数。
 
-Suppose next that our ultimate goal is structured prediction, i.e. given
-$$x$$ we predict $$y$$ via $$\arg\max_y p(y \mid  x)$$. What loss function should we use to measure error in this setting?
+假设我们下个目标是结构预测。即已知 $$x$$
+我们预测 $$y$$ 取 $$\arg\max_y p(y \mid  x)$$。
+这个情境下我们应该用什么样的损失函数？
 
-One reasonable choice would be the classification error:
+一个合理的选择是分类错误：
 {% math %}
-\mathbb{E}_{(x,y)\sim p^*} [\mathbb{I}\{ \exists y' \neq y : p(y'\mid x) \geq p(y\mid x) \}],
+\mathbb{E}_{(x,y)\sim p^* } [\mathbb{I}\{ \exists y' \neq y : p(y'\mid x) \geq p(y\mid x) \}],
 {% endmath %}
-which is the probability over all $$(x, y)$$ pairs sampled from $$p^*$$ that we predict
-the wrong assignment.
-A somewhat better choice might be the hamming loss, which counts the number of variables in which the MAP assignment differs from the ground truth label.
-There also exists a fascinating line of work on generalizations of the hinge loss to CRFs, which leads to a class of models called *structured support vector machines*.
+表示在所有从 $$p^* $$ 中抽样的 $$(x, y)$$ 对当中，模型预测错误赋值的概率。
+另一个可能更好的选择是 Hamming 损失，计算的是 MAP 赋值中有几个变量的赋值不同于参考值。
+还有一些精彩的工作做的是把铰链损失推广到条件随机场，这类模型称作「结构化支持向量机」。
 
-The moral of the story here is that it often makes sense to choose a loss that is appropriate to the task at hand, e.g. prediction rather than full density estimation.
+故事的教训选择一个适合手上任务（预测而不是估计整个密度）的损失函数会比较合理。
 
-## Empirical Risk and Overfitting
+## 经验风险与过适
 
-Empirical risk minimization can easily overfit the data.
-The data we have is a sample, and usually there is vast amount of samples that we have never seen. Our model should generalize well to these "never-seen" samples.
+最小化经验风险常常导致模型对数据过适。我们有的数据是一个样本，而通常
+我们有很多样本没有见过。我们的模型必须能推广到这些从没见过的样本。
 
-### The bias/variance tradeoff
+### 偏差/方差的取舍
 
-Thus, we typically restrict the *hypothesis space* of distributions that we search over. If the hypothesis space is very limited, it might not be able to represent $$p^*$$, even with unlimited data. This type of limitation is called bias, as the learning is limited on how close it can approximate the target distribution
+Thus, we typically restrict the *hypothesis space* of distributions that we search over. If the hypothesis space is very limited, it might not be able to represent $$p^* $$, even with unlimited data. This type of limitation is called bias, as the learning is limited on how close it can approximate the target distribution
 
 If we select a highly expressive hypothesis class, we might represent better the data. However, when we have small amount of data, multiple models can fit well, or even better than the true model. Moreover, small perturbations on D will result in very different estimates. This limitation is call the variance.
 
 Thus, there is an inherent bias-variance trade off when selecting the hypothesis class. One of the main challenges of machine learning is to choose a model that is sufficiently rich to be useful, yet not so complex as to overfit the training set.
 
-### How to avoid overfitting?
+### 如何防止过适？
 
-High bias can be avoided by increasing the capacity of the model. We may avoid high variance using several approaches.
+增加模型的变数可以防止偏差过高。而防止高方差有几种作法。
 
-We may impose hard constraints, e.g. by selecting a less expressive hypothesis class: Bayesian networks with at most $$d$$ parents or pairwise (rather than arbitrary-order) MRFs. We may also introduce a soft preference for "simpler" models by adding a regularizer term $$R(p)$$ to the loss $$L(x,p)$$, which will penalize overly complex $$p$$.
+一是可以加上很强的约束，例如选择一个比较没有表现能力的模型类别：
+每个节点的父节点不超过 $$d$$ 个的贝叶斯网络、
+二元（而不是任意多元）的马可夫网络等等。我们也可以软性地偏好简单的模型，
+只要在损失函数 $$L(x,p)$$ 裡加上正规化项 $$R$$，令其惩罚过于复杂的 $$p$$。
 
-### Generalization error
+### 推广错误
 
-At training, we minimize empirical loss
+训练期间我们最小化经验损失
 {% math %}
 \frac{1}{|D|} \sum_{x \in D}  \log p(x).
 {% endmath %}
-However, we are actually interested in minimizing
+然而，我们真正想最小化的是
 {% math %}
-\mathbb{E}_{x \sim p^*} [ \log p(x) ].
+\mathbb{E}_{x \sim p^* } [ \log p(x) ].
 {% endmath %}
 
-We cannot guarantee with certainty the quality of our learned model.
-This is because the data $$D$$ is sampled stochastically from $$p^*$$, and we might get an unlucky sample. The goal of learning theory is to prove that the model is approximately correct: for most $$D$$, the learning procedure returns a model whose error is low. There exist a vast literature that quantifies the probability of observing a given error between the empirical and the expected loss given a particular type of model and a particular dataset size.
+我们不能保证我们学习模型的质量。因為数据 $$D$$ 是从 $$p^* $$ 随机采样出的。
+所以可能会得到不好的样本。学习理论的目标就是证明某个模型已经接近正确，对于
+大部分 $$D$$，学习过程回传一个错误很低的模型。There exist a vast literature that quantifies the probability of observing a given error between the empirical and the expected loss given a particular type of model and a particular dataset size.
 
-## Maximum likelihood learning in Bayesian networks
+## 贝叶斯网络上的最高似然学习
 
-Let us now apply this long discussion to a particular problem of interest: parameter learning in Bayesian networks.
+现在我们把这整篇文章的内容应用在一个有意思的问题上，贝叶斯网络上的参数学习。
 
-Suppose that we are given a Bayesian network $$p(x) = \prod^n_{i=1} \theta_{x_i \mid pa(x_i)}$$ and i.i.d. samples $$D=\{x^{(1)},x^{(2)},...,x^{(m)}\}$$. What is the maximum likelihood estimate of the parameters (the CPDs)?
+已知贝叶斯网络 $$p(x) = \prod^n_{i=1} \theta_{x_i \mid pa(x_i)}$$
+及 iid 样本 $$D=\{x^{(1)},x^{(2)},...,x^{(m)}\}$$，
+求参数（条件概率表）的最大似然估计。
 
-We may write the likelihood as
+我们可以把似然写作
 {% math %}
 L(\theta, D) = \prod_{i=1}^n \prod_{j=1}^m \theta_{x_i^{(j)} \mid pa(x_i^{(j)})}
 {% endmath %}
-Taking logs and combining like terms, this becomes
+求指数并合并同类项，得
 {% math %}
 \log L(\theta, D) = \sum_{i=1}^n \#(x_i, pa(x_i)) \cdot \theta_{x_i \mid pa(x_i)}.
 {% endmath %}
-Thus, maximization of the (log) likelihood function decomposes into separate maximizations for the local conditional distributions!
-This is essentially the same as the head/tails example we saw earlier (except with more categories). It's a simple calculus exercise to formally show that
+因此这个(指数)似然函数的最大值可以分解成局部条件分布各自最大值之和！
+这与先前的硬币例子是一样的（只是结果有更多种类）。
+基本的微积分足以证明：
 {% math %}
-\theta^*_{x_i \mid pa(x_i)} = \frac{\#(x_i, pa(x_i))}{\#(pa(x_i))}.
+{\theta^* }_{x_i \mid pa(x_i)} = \frac{\#(x_i, pa(x_i))}{\#(pa(x_i))}.
 {% endmath %}
 
-We thus conclude that in Bayesian networks with discrete variables, the maximum-likelihood estimate has a closed-form solution. Even when the variables are not discrete, the task is equally simple: the log-factors are linearly separable, hence the log-likelihood reduces to estimating each of them separately. The simplicity of learning is one of the most convenient features of Bayesian networks.
+总而言之，对离散变量值的贝叶斯网络，最大似然估计有闭形式解。
+就算变量值不是离散任务也一样简单。因為指数因子是线性可分的，所以指数似然函数
+可以分解為对因子逐个估计。
+容易学习是贝叶斯最方便的特色之一。
