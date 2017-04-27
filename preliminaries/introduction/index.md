@@ -1,8 +1,8 @@
 ---
 layout: post
-title: Introduction
+title: 导论
 ---
-Probabilistic graphical modeling is a branch of machine learning that studies how to use probability distributions to describe the world and to make useful predictions about it.
+概率图模型是Probabilistic graphical modeling is a branch of machine learning that studies how to use probability distributions to describe the world and to make useful predictions about it.
 
 There are dozens of reasons to learn about probabilistic modeling.
 For one, it is a fascinating scientific field with a beautiful theory that bridges in surprising ways two very different branches of mathematics: probability and graph theory. Probabilistic modeling also has intriguing connections to philosophy, particularly the question of causality.
@@ -25,7 +25,7 @@ where $$y$$ is an outcome variable that we want to predict, and $$x$$ are known 
 Often, the real world that we are trying to model is very complicated; in particular, it often involves a significant amount of *uncertainty* (e.g., the price of a house has a certain chance of going up if a new subway station opens within a certain distance). It is therefore very natural to deal with this uncertainty by modeling the world in the form a probability distribution{% sidenote 2 'For a more philosophical discussion of why one should use probability theory as opposed to something else, see the [Dutch book argument](http://plato.stanford.edu/entries/dutch-book/) for probabilism.'%}
 
 {% math %}
-p(x,y). 
+p(x,y).
 {% endmath %}
 
 Given such a model, we could ask questions such as "what is the probability that house prices will rise over the next five years?", or "given that the house costs $100,000, what is the most probability that it has three bedrooms?" The probabilistic aspect of modeling is very important, because:
@@ -56,7 +56,7 @@ For example, suppose that the English words are all conditionally independent gi
 
 We refer to this particular choice of independencies as the *Naive Bayes* assumption. Given this assumption, we can write the model probability as a product of factors
 
-{% math %} 
+{% math %}
 P(y,x_1,...,x_n) = p(y) \prod_{i=1}^n p(x_i|y).
 {% endmath %}
 
@@ -79,7 +79,7 @@ Our discussion of graphical models will be divided into three major parts: repre
 
 How do we express a probability distribution that models some real-world phenomenon? This is not a trivial problem: we have seen that a naive model for classifying spam messages with $$n$$ possible words requires us in general to specify $$O(2^n)$$ parameters. We will address this difficulty via general techniques for constructing tractable models. These recipes will make heavy use of graph theory; probabilities will be described by graphs whose properties (e.g. connectivity, tree-width) will reveal probabilistic and algorithmic features of the model (e.g., independence, learning complexity).
 
-### Inference 
+### Inference
 
 Given a probabilistic model, how do we obtain answers to relevant questions about the world? Such questions often reduce to querying the marginal or conditional probabilities of certain events of interest. More concretely, we will be typically interested in asking the system two types of questions:
 

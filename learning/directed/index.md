@@ -19,7 +19,8 @@ title: 有向模型中的學習
 
 ## 学习任务
 
-Before, we start our discussion of learning, let's first reflect on what it means to fit a model, and what is a desirable objective for this task.
+在开始讨论学习之前我们先反思一下调适模型代表了什么，
+以及如何為此选择一个目标函数。
 
 假设定义域有著分布 $$p^* $$。我们的数据集 $$D$$ 包含分布 $$p^* $$ 的 $$m$$ 个样本。标准的假设是这些样本独立同分布(iid)。又已知一类模型 $$M$$，我们的任务是
 学习$$M$$裡面一些「好」的模型，对应一个分布 $$p$$。例如我们可以考虑
@@ -98,7 +99,7 @@ for which the optimal solution is
 不需要估计整个联合分布。训练条件随机场时使用的是这个目标函数。
 
 假设我们下个目标是结构预测。即已知 $$x$$
-我们预测 $$y$$ 取 $$\arg\max_y p(y \mid  x)$$。
+预测 $$y$= $\arg\max_y p(y \mid  x)$$。
 这个情境下我们应该用什么样的损失函数？
 
 一个合理的选择是分类错误：
@@ -116,44 +117,51 @@ for which the optimal solution is
 最小化经验风险常常导致模型对数据过适。我们有的数据是一个样本，而通常
 我们有很多样本没有见过。我们的模型必须能推广到这些从没见过的样本。
 
-### 偏差/方差的取舍
+### 偏差/变异的取舍
 
-Thus, we typically restrict the *hypothesis space* of distributions that we search over. If the hypothesis space is very limited, it might not be able to represent $$p^* $$, even with unlimited data. This type of limitation is called bias, as the learning is limited on how close it can approximate the target distribution
+因此我们通常会限制搜索的「假说空间」。
+如果假说空间很有限，有可能不论多少数据都没法表现 $$p^* $$。
+这种制约被称作「偏差」，因為学习过程被限制可以多靠近目标分布。
 
-If we select a highly expressive hypothesis class, we might represent better the data. However, when we have small amount of data, multiple models can fit well, or even better than the true model. Moreover, small perturbations on D will result in very different estimates. This limitation is call the variance.
+如果我们选择了一类表达力很强的假说。我们可能可以更好表达数据。
+然而，当我们只有很少量的数据时，许多不同的模型实例可能都可以适应得很好，
+甚至有些比真正的模型适应得更好。另外，数据集上小的扰动都可能会导致
+差异很大的估计。这样的制约被称作「变异」。
 
-Thus, there is an inherent bias-variance trade off when selecting the hypothesis class. One of the main challenges of machine learning is to choose a model that is sufficiently rich to be useful, yet not so complex as to overfit the training set.
+因此在选择假说类的时候有一个内在的偏差/变异的取舍。
+机器学习的主要挑战之一就是如何选一个模型使其表达力足够用又不会复杂到过适。
 
 ### 如何防止过适？
 
-增加模型的变数可以防止偏差过高。而防止高方差有几种作法。
+增加模型的变数可以防止偏差过高。而防止高变异有几种作法。
 
 一是可以加上很强的约束，例如选择一个比较没有表现能力的模型类别：
 每个节点的父节点不超过 $$d$$ 个的贝叶斯网络、
 二元（而不是任意多元）的马可夫网络等等。我们也可以软性地偏好简单的模型，
 只要在损失函数 $$L(x,p)$$ 裡加上正规化项 $$R$$，令其惩罚过于复杂的 $$p$$。
 
-### 推广错误
+### 推广产生的错误
 
-训练期间我们最小化经验损失
+训练期间通常最小化经验损失
 {% math %}
 \frac{1}{|D|} \sum_{x \in D}  \log p(x).
 {% endmath %}
-然而，我们真正想最小化的是
+然而，真正需要最小化的是
 {% math %}
 \mathbb{E}_{x \sim p^* } [ \log p(x) ].
 {% endmath %}
+于是我们无法保证学习模型的质量。因為数据 $$D$$ 是从 $$p^* $$ 随机采样出的。
+可能会得到不好的样本。学习理论的目标就是证明某个模型已经接近正确，对于
+大部分 $$D$$，学习过程会求得一个两者误差很低的模型。
+有许多文献量化已知一类模型与数据集大小，
+经验损失与预期损失之间产生误差的概率。
 
-我们不能保证我们学习模型的质量。因為数据 $$D$$ 是从 $$p^* $$ 随机采样出的。
-所以可能会得到不好的样本。学习理论的目标就是证明某个模型已经接近正确，对于
-大部分 $$D$$，学习过程回传一个错误很低的模型。There exist a vast literature that quantifies the probability of observing a given error between the empirical and the expected loss given a particular type of model and a particular dataset size.
-
-## 贝叶斯网络上的最高似然学习
+## 贝叶斯网络上的最大似然学习
 
 现在我们把这整篇文章的内容应用在一个有意思的问题上，贝叶斯网络上的参数学习。
 
 已知贝叶斯网络 $$p(x) = \prod^n_{i=1} \theta_{x_i \mid pa(x_i)}$$
-及 iid 样本 $$D=\{x^{(1)},x^{(2)},...,x^{(m)}\}$$，
+及独立同分布样本 $$D=\{x^{(1)},x^{(2)},...,x^{(m)}\}$$，
 求参数（条件概率表）的最大似然估计。
 
 我们可以把似然写作
@@ -164,8 +172,8 @@ L(\theta, D) = \prod_{i=1}^n \prod_{j=1}^m \theta_{x_i^{(j)} \mid pa(x_i^{(j)})}
 {% math %}
 \log L(\theta, D) = \sum_{i=1}^n \#(x_i, pa(x_i)) \cdot \theta_{x_i \mid pa(x_i)}.
 {% endmath %}
-因此这个(指数)似然函数的最大值可以分解成局部条件分布各自最大值之和！
-这与先前的硬币例子是一样的（只是结果有更多种类）。
+此(指数)似然函数的最大值可以分解成局部条件分布各自最大值之和！
+这与先前的硬币例子是一样的道理（只是结果有更多种类）。
 基本的微积分足以证明：
 {% math %}
 {\theta^* }_{x_i \mid pa(x_i)} = \frac{\#(x_i, pa(x_i))}{\#(pa(x_i))}.

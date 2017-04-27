@@ -1,43 +1,51 @@
 ---
 layout: post
-title: Bayesian networks
+title: 贝叶斯网络
 ---
-We begin with the topic of *representation*: how do we choose a probability distribution to model some interesting aspect of the world? 
-Coming up with a good model is not always easy: we have seen in the introduction that a naive model for spam classification would require us to specify a number of parameters that is exponential in the number of words in the English language!
+我们从「表现」这个主题开始。表现讨论的是如何选取一个概率分布对现实世界建模。
+想出一个好的模型有时很困难：我们在导论中见过一个分类垃圾邮件的朴素模型，
+那个模型需要我们选取的参数数量随英语单词数几何增长！
 
-In this chapter, we will learn about one way to avoid these kinds of complications.
-We are going to:
+本章我们讨论防止这种麻烦的一种方法。我们将：
 
-- Learn an effective and general technique for parameterizing probability distributions using only a few parameters.
-- See how the resulting models can be elegantly described via *directed acyclic graphs* (DAGs). 
-- Study connections between the structure of a DAG and the modeling assumptions made by distribution that it describes; this will not only make these modeling assumptions more explicit, but will also help us design more efficient inference algorithms.
+- 学习一个有效且通用的方法，只用几个参数来决定一个概率分布
+- 优雅地使用有向无环图来表示这些模型
+- 学习有向无环图结构与建模假设之间的关系。这不仅会使这些建模假设更明显，也会
+帮助我们设计更加有效的推断算法。
 
-The kinds of models that we will see here are referred to as *Bayesian networks*. In the next chapter, we will also see a second approach, which involves *undirected* graphs, also known as *Markov random fields*.
+我们这裡讨论的一类模型称作「贝叶斯网络」。下一章节我们会讨论第二种模型，称作「马可夫网络」，使用的是无向图。
 
+## 用贝叶斯网络进行概率建模
 
-## Probabilistic modeling with Bayesian networks
+有向无环图模型即贝叶斯网络是一类概率模型，可以用很少的参数描述，并表示為
+一个有向图。
 
-Directed graphical models (a.k.a. Bayesian networks) are a family of probability distributions that admit a compact parametrization that can be naturally described using a directed graph. 
+这种参数化的思想出奇简单。
 
-The general idea behind this parametrization is surprisingly simple.
-
-Recall that by the chain rule, we can write any probability $$p$$ as:
+记得链式法则，我们可以把概率 $$p$$ 写作
 {% math %}
 p(x_1,x_2,...,x_n) = p(x_1) p(x_2\mid x_1) \cdots p(x_n\mid x_{n-1},...,x_2,x_1).
 {% endmath %}
-A compact Bayesian network is a distribution in which each factor on the right hand side depends only on a small number of *ancestor variables* $$x_{A_i}$$:
-{% math %} 
-p(x_i \mid  x_{i-1}...x_1) = p(x_i \mid  x_{A_i}). 
+一个紧凑的贝叶斯网络是一种分布，其右手边的因子都只关于几个「祖先变量」 $$x_{A_i}$$:
+{% math %}
+p(x_i \mid  x_{i-1}...x_1) = p(x_i \mid  x_{A_i}).
 {% endmath %}
-For example, in a model with five variables, we may choose to approximate the factor {%m%}p(x_5\mid x_4, x_3, x_2, x_1){%em%} with {%m%}p(x_5 \mid  x_4, x_3){%em%}. In this case, we write $$x_{A_i} = \{x_4, x_3\}$$.
+例如，在一个有五个变量的模型，我们选择表示因子 {%m%}p(x_5\mid x_4, x_3, x_2, x_1){%em%} 為 {%m%}p(x_5 \mid  x_4, x_3){%em%}。在这个例子中，
+可以把其祖先写作 $$x_{A_i} = \{x_4, x_3\}$$.
 
-When the variables are discrete (which will be often be the case in the problem we will consider), we may think of the factors {%m%}p(x_i\mid x_{A_i}){%em%} as *probability tables*, in which columns correspond to assignments to $$x_{A_i}$$ and rows correspond to values of $$x_i$$; the entries contain the actual probabilities {%m%}p(x_i\mid x_{A_i}){%em%}. If each variable takes $$d$$ values and has at most $$k$$ ancestors, then the entire table will contain at most $$O(d^{k+1})$$ entries. Since we have one table per variable, the entire probability distribution can be compactly described with only $$O(nd^k)$$ parameters (compared to $$O(d^n)$$ with a naive approach).
+对离散变量（大部分问题都是如此），可以把因子 {%m%}p(x_i\mid x_{A_i}){%em%} 表示為一个「概率表」，每一列{%sidenote 1 '译注：按中国大陆横為「行」直為「列」。台湾相反，见[此处讨论](https://ccjou.wordpress.com/2012/04/17/%E5%85%A9%E5%B2%B8%E7%B7%9A%E6%80%A7%E4%BB%A3%E6%95%B8%E7%9A%84%E7%BF%BB%E8%AD%AF%E5%90%8D%E8%A9%9E%E5%8F%83%E7%85%A7/)。' %}对应 $$x_{A_i}$$ 的赋值，
+行对应 $$x_i$$ 的赋值，而每一个表格元素是实际的概率 {%m%}p(x_i\mid x_{A_i}){%em%}。
+如果每个变量可以取 $$d$$ 个不同值并有最多 $$k$$ 个祖先变量，则
+整个表格会包含最多 $$O(d^{k+1})$$ 个概率。
+因為每个变量需要一张表格，整个概率分布可以用 $$O(nd^k)$$ 个参数紧凑表示
+（对比朴素作法的 $$O(d^n)$$ 个参数）
 
-### Graphical representation.
+### 图表示
 
-Distributions of this form can be naturally expressed as *directed acyclic graphs*, in which vertices correspond to variables $$x_i$$ and edges indicate dependency relationships. In particular we set the parents of each node to $$x_i$$ to its ancestors $$x_{A_i}$$. 
+这样的分布可以自然表示為有向图，其中每个节点表示变量 $$x_i$$，
+边表示依赖关系。特别地，每个节点 $$x_i$$ 的父节点对应其祖先变量 $$x_{A_i}$$。
 
-As an example, consider a model of a student's grade $$g$$ on an exam; this grade depends on several factors: the exam's difficulty $$d$$, the student's intelligence $$i$$, his SAT score $$s$$; it also affects the quality $$l$$ of the reference letter from the professor who taught the course. Each variable is binary, except for $$g$$, which takes 3 possible values.{% marginfigure 'nb1' 'assets/img/grade-model.png' 'Bayes net model describing the performance of a student on an exam. The distribution can be represented a product of conditional probability distributions specified by tables. The form of these distributions is described by edges in the graph.'%} The joint probability distribution over the 5 variables naturally factorizes as follows:
+举例，consider a model of a student's grade $$g$$ on an exam; this grade depends on several factors: the exam's difficulty $$d$$, the student's intelligence $$i$$, his SAT score $$s$$; it also affects the quality $$l$$ of the reference letter from the professor who taught the course. Each variable is binary, except for $$g$$, which takes 3 possible values.{% marginfigure 'nb1' 'assets/img/grade-model.png' 'Bayes net model describing the performance of a student on an exam. The distribution can be represented a product of conditional probability distributions specified by tables. The form of these distributions is described by edges in the graph.'%} The joint probability distribution over the 5 variables naturally factorizes as follows:
 {% math %}
 p(l, g, i, d, s) = p(l \mid  g) p(g \mid  i, d) p(i) p(d) p(s\mid d).
 {% endmath %}
@@ -49,22 +57,23 @@ In the above example, to determine the quality of the reference letter, we may f
 In the previous spam classification example, we implicitly postulated that email is generated according to a two-step process:
 first, we choose a spam/non-spam label $$y$$; then we sample independently whether each word is present, conditioned on that label.
 
-### Formal definition.
+### 严谨定义
 
-Formally, a Bayesian network is a directed graph $$G = (V,E)$$ together with
+更严谨的，贝叶斯网络是一个有向图 $$G = (V,E)$$ 加上
 
-- A random variable $$x_i$$ for each node $$i \in V$$.
-- One conditional probability distribution (CPD) {%m%}p(x_i \mid  x_{A_i}){%em%} per node, specifying the probability of $$x_i$$ conditioned on its parents' values.
+- 每个节点 $$i \in V$$ 对应的一个随机变量
+- 每个节点对应一个条件概率分布（CPD） {%m%}p(x_i \mid  x_{A_i}){%em%}，定义 $$x_i$$ 已知其父节点取值时的概率分布。
 
-Thus, a Bayesian network defines a probability distribution $$p$$.
-Conversely, we say that a probability $$p$$ *factorizes* over a DAG $$G$$ if it can be decomposed into a product of factors, as specified by $$G$$.
+因此，一个贝叶斯网络定义了一个概率分布 $$p$$。
+相反地我们也可以说一个概率分布 $$p$$ 在有向无环图 $$G$$ 上**分解**，
+若该概率可以按照图 $$G$$ 分解成一些因子的积。
 
 It is not hard to see that a probability represented by a Bayesian network will be valid: clearly, it will be non-negative and one can show using an induction argument (and using the fact that the CPDs are valid probabilities) that the sum over all variable assignments will be one.
 Conversely, we can also show by counter-example that when $$G$$ contains cycles, its associated probability may not sum to one.
 
 ## The dependencies of a Bayes net
 
-To summarize, Bayesian networks represent probability distributions that can be formed via products of smaller, local conditional probability distributions (one for each variable). 
+To summarize, Bayesian networks represent probability distributions that can be formed via products of smaller, local conditional probability distributions (one for each variable).
 By expressing a probability in this form, we are introducing into our model assumptions that certain variables are independent.
 
 This raises the question: which independence assumptions are we exactly making by using a model Bayesian network with a given structure described by $$G$$?
@@ -100,10 +109,10 @@ For example, in the graph below, $$X_1$$ and $$X_6$$ are $$d$$-separated given $
 The notion of $$d$$-separation is  useful, because it lets us describe a large fraction of the dependencies that hold in our model.
 Let {%m%}I(G) = \{(X \perp Y \mid  Z) : \text{$$X,Y$$ are $$d$$-sep given $$Z$$}\}{%em%} be a set of variables that are $$d$$-separated in $$G$$.
 
-**Fact**{% sidenote 1 'We will not formally prove this, but the intuition is that if $$X,Y$$ and $$Y,Z$$ are mutually dependent, so are $$X,Z$$. Thus we can look at adjacent nodes and propagate dependencies according to the local dependency structures outlined above.'%}:
+**Fact**{% sidenote 2 'We will not formally prove this, but the intuition is that if $$X,Y$$ and $$Y,Z$$ are mutually dependent, so are $$X,Z$$. Thus we can look at adjacent nodes and propagate dependencies according to the local dependency structures outlined above.'%}:
 If $$p$$ factorizes over $$G$$, then $$I(G) \subseteq I(p)$$. In this case, we say that $$G$$ is an $$I$$-map (independence map) for $$p$$
 
-In other words, all the independencies encoded in $$G$$ are sound: variables that are $$d$$-separated in $$G$$ are truly independent in $$p$$. However, the converse is not true: a distribution may factorize over $$G$$, yet have independencies that are not captured in $$G$$. 
+In other words, all the independencies encoded in $$G$$ are sound: variables that are $$d$$-separated in $$G$$ are truly independent in $$p$$. However, the converse is not true: a distribution may factorize over $$G$$, yet have independencies that are not captured in $$G$$.
 
 In a way this is almost a trivial statement. If $$p(x,y) = p(x)p(y)$$, then this distribution still factorizes over the graph $$y \rightarrow x$$, since we can always write it as {%m%}p(x,y) = p(x\mid y)p(y){%em%} with a CPD {%m%}p(x\mid y){%em%} in which the probability of $$x$$ does not actually vary with $$y$$. However, we can construct a graph that matches the structure of $$p$$ by simply removing that unnecessary edge.
 
